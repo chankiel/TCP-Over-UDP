@@ -61,15 +61,17 @@ Segment finAck()
 /**
  * Calculate the checksum for a given Segment
  */
-uint8_t *calculateChecksum(Segment segment)
+uint16_t calculateChecksum(Segment &segment)
 {
     segment.checksum = 0;
 
-    size_t segmentSize = sizeof(Segment);
-    size_t payloadSize = (segment.data_offset - 5) * 4;
-    size_t totalSize = segmentSize + payloadSize;
+    const size_t segmentSize = sizeof(Segment);
+    const size_t payloadSize = (segment.data_offset - 5) * 4;
+    const size_t totalSize = segmentSize + payloadSize;
 
-    uint8_t *buffer = new uint8_t[totalSize];
+    uint8_t buffer[totalSize];
+    memset(buffer, 0, totalSize); 
+
     memcpy(buffer, &segment, segmentSize);
 
     if (segment.payload != nullptr && payloadSize > 0)
@@ -94,14 +96,8 @@ uint8_t *calculateChecksum(Segment segment)
     }
 
     uint16_t checksum = ~sum;
-    // segment.checksum = checksum;
 
-    uint8_t *result = new uint8_t[2];
-    result[0] = (checksum >> 8) & 0xFF;
-    result[1] = checksum & 0xFF;
-
-    delete[] buffer;
-    return result;
+    return checksum;
 }
 
 
@@ -111,7 +107,7 @@ uint8_t *calculateChecksum(Segment segment)
 Segment updateChecksum(Segment segment)
 {
     auto checksum = calculateChecksum(segment);
-    segment.checksum = (checksum[0] << 8) | checksum[1];
+    segment.checksum = checksum; // (checksum[0] << 8) | checksum[1];
     return segment;
 }
 
@@ -121,6 +117,6 @@ Segment updateChecksum(Segment segment)
 bool isValidChecksum(Segment segment)
 {
     auto checksum = calculateChecksum(segment);
-    uint16_t computed = (checksum[0] << 8) | checksum[1];
+    uint16_t computed = checksum; //(checksum[0] << 8) | checksum[1];
     return computed == segment.checksum;
 }
