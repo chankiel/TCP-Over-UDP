@@ -4,7 +4,8 @@
 #include "segment.hpp"
 #include <vector>
 #include <cmath>
-
+#include <cstring>
+#include <algorithm>
 using namespace std;
 
 class SegmentHandler
