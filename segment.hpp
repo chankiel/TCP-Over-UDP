@@ -36,7 +36,7 @@ struct Segment
     // todo continue
     uint8_t *payload;
     Segment() : sourcePort(0), destPort(0), seqNum(0), ackNum(0), window(0),
-                checksum(0), urgentPointer(0), payload(nullptr)
+                checksum(0), urgPointer(0), payload(nullptr)
     {
         data_offset = 5;
         reserved = 0;
