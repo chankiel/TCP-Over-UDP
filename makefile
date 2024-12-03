@@ -1,30 +1,28 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall
+CXXFLAGS = -std=c++17 -pthread
+INCLUDES = -I./template-jarkom-main
 
-# Define the source files and the object files
-SOURCES = $(wildcard *.cpp)
-OBJECTS = $(SOURCES:.cpp=.o)
+# Source files
+SRC = main.cpp client.cpp server.cpp segment.cpp socket.cpp
 
-# Define the output executable
-EXEC = main
+# Output binary
+TARGET = node
 
-# Default target to build the project
-all: $(EXEC)
+# Default target: build the program
+all: $(TARGET)
 
-# Rule to compile the source files into object files
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+# Link object files to create the final executable
+$(TARGET): $(SRC)
+	$(CXX) $(SRC) -o $(TARGET) $(CXXFLAGS) $(INCLUDES)
 
-# Rule to link the object files into the final executable
-$(EXEC): $(OBJECTS)
-	$(CXX) $(CXXFLAGS) -o $(EXEC) $(OBJECTS)
-
-# Rule to clean up generated files
+# Clean up object files and binary
 clean:
-	rm -f $(OBJECTS) $(EXEC)
+	rm -f $(TARGET)
 
-# Run the main program with the specified host and port arguments
-run: $(EXEC)
-	./$(EXEC) node $(host) $(port)
+# Run the program with arguments
+run: $(TARGET)
+	./$(TARGET) $(ARGS)
 
+# Phony targets
+.PHONY: all clean run
