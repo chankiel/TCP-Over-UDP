@@ -33,3 +33,15 @@ void Server::startServer() {
   free(buffer);
 }
 
+private:
+int port_;
+std::string clientIp_ = "127.0.0.1"; // For simplicity, assuming a local client.
+int clientPort_ = 8081;              // Example client port.
+}
+;
+
+int main() {
+  Server server(8080);
+  server.startServer();
+  return 0;
+}

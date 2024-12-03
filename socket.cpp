@@ -50,13 +50,14 @@ int32_t TCPSocket::ambil(void *buffer, uint32_t length) {
 
   clientAddr.sin_family = AF_INET;
   clientAddr.sin_addr.s_addr = inet_addr(ip.c_str());
-  clientAddr.sin_port = htons(port);
+  clientAddr.sin_port = htons(554);
   socklen_t addrLen = sizeof(clientAddr);
 
   std::cout << "bfr  recvfrom " << std::endl;
-  std::cout << port << std::endl;
+  std::cout << clientAddr.sin_port << std::endl;
   int bytesRead = recvfrom(sockfd, buffer, length, 0,
                            (struct sockaddr *)&clientAddr, &addrLen);
+  std::cout << clientAddr.sin_port << std::endl;
   std::cout << "aft  recvfrom " << std::endl;
   if (bytesRead < 0) {
     throw std::runtime_error("Failed to receive data");

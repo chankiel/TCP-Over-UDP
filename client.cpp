@@ -25,9 +25,20 @@ void Client::startHandshake() {
   std::cout << "Sent SYN packet to server." << std::endl;
 
   void *buffer = malloc(sizeof(Segment));
-  std::cout << "Before receiving data in client" << std::endl;
+  std::cout << "sebelum ambl di cli" << std::endl;
   connection->ambil(buffer, sizeof(Segment));
-  std::cout << "After receiving data in client" << std::endl;
+  std::cout << "sesudah ambl di cli" << std::endl;
   handleMessage(buffer);
   free(buffer);
+}
+
+// private:
+//   std::string serverIp_;
+//   int serverPort_;
+// };
+
+int main() {
+  Client client("127.0.0.1", 8080);
+  client.startHandshake();
+  return 0;
 }
