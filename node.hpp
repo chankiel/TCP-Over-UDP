@@ -8,14 +8,13 @@
  *
  * This is the base class for Server and Client class.
  */
-class Node
-{
+class Node {
 protected:
-    TCPSocket *connection;
+  TCPSocket *connection;
 
 public:
-    void run();
-    virtual void handleMessage(void *buffer) = 0;
+  void run();
+  virtual void handleMessage(void *buffer) = 0;
 };
 
 #endif

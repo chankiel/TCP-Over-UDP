@@ -2,46 +2,44 @@
 #define segment_h
 
 #include <cstdint>
+#include <cstring>
 
-struct Segment
-{
-    uint16_t sourcePort: 16;
-    uint16_t destPort: 16;
-    uint32_t seqNum: 32;
-    uint32_t ackNum: 32;
-    // todo continue
+struct Segment {
+  uint16_t sourcePort : 16;
+  uint16_t destPort : 16;
+  uint32_t seqNum : 32;
+  uint32_t ackNum : 32;
+  // todo continue
 
-    struct
-    {
-        unsigned int data_offset : 4;
-        unsigned int reserved : 4;
-    };
+  struct {
+    unsigned int data_offset : 4;
+    unsigned int reserved : 4;
+  };
 
-    struct
-    {
-        unsigned int cwr : 1;
-        unsigned int ece : 1;
-        unsigned int urg : 1;
-        unsigned int ack : 1;
-        unsigned int psh : 1;
-        unsigned int rst : 1;
-        unsigned int syn : 1;
-        unsigned int fin : 1;
-        // todo continue ...
-    } flags;
+  struct {
+    unsigned int cwr : 1;
+    unsigned int ece : 1;
+    unsigned int urg : 1;
+    unsigned int ack : 1;
+    unsigned int psh : 1;
+    unsigned int rst : 1;
+    unsigned int syn : 1;
+    unsigned int fin : 1;
+    // todo continue ...
+  } flags;
 
-    uint16_t window: 16;
-    uint16_t checksum: 16;
-    uint16_t urgPointer: 16;
-    // todo continue
-    uint8_t *payload;
-    Segment() : sourcePort(0), destPort(0), seqNum(0), ackNum(0), window(0),
-                checksum(0), urgPointer(0), payload(nullptr)
-    {
-        data_offset = 5;
-        reserved = 0;
-        memset(&flags, 0, sizeof(flags));
-    }
+  uint16_t window : 16;
+  uint16_t checksum : 16;
+  uint16_t urgPointer : 16;
+  // todo continue
+  uint8_t *payload;
+  Segment()
+      : sourcePort(0), destPort(0), seqNum(0), ackNum(0), window(0),
+        checksum(0), urgPointer(0), payload(nullptr) {
+    data_offset = 5;
+    reserved = 0;
+    memset(&flags, 0, sizeof(flags));
+  }
 } __attribute__((packed));
 
 const uint8_t FIN_FLAG = 1;
