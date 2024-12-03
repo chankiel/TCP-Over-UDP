@@ -28,7 +28,8 @@ enum TCPStatusEnum {
 class TCPSocket {
   // todo add tcp connection state?
 public:
-  TCPSocket(int port);
+  // TCPSocket(int port);
+  TCPSocket(string ip, int port);
 
 private:
   /**
@@ -49,11 +50,10 @@ private:
   void getStatus();
 
 public:
-  void listen();
-  void send(string ip, int32_t port, void *dataStream, uint32_t dataSize,
-            int isClient);
+  void listen(int servPort);
+  void send(string ip, int32_t port, void *dataStream, uint32_t dataSize);
 
-  int32_t ambil(void *buffer, uint32_t length, int isClient);
+  int32_t ambil(void *buffer, uint32_t length);
   void close();
 };
 
