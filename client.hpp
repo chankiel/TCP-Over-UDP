@@ -4,16 +4,18 @@
 #include "node.hpp"
 #include "segment.hpp"
 #include "socket.hpp"
-#include <string>
 #include <iostream>
+#include <string>
 
 class Client : public Node {
 public:
-  Client(const std::string &serverIp, int serverPort);
+  Client(string myIP, int myport);
   void handleMessage(void *buffer) override;
   void startHandshake();
 
 private:
+  string clientIP;
+  int clientPort;
   std::string serverIp_;
   int serverPort_;
   TCPSocket *connection;

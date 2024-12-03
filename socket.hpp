@@ -3,6 +3,7 @@
 
 #include "segment.hpp"
 #include "segment_handler.hpp"
+#include <cstdint>
 #include <functional>
 #include <netinet/in.h>
 #include <string>
@@ -50,9 +51,10 @@ private:
   void getStatus();
 
 public:
-  void listen(int servPort);
+  void listen(string ip, int port);
   void send(string ip, int32_t port, void *dataStream, uint32_t dataSize);
-
+  string getIP();
+  int32_t getPort();
   int32_t ambil(void *buffer, uint32_t length);
   void close();
 };

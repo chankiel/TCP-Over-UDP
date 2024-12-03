@@ -1,10 +1,10 @@
 #include "client.hpp"
 #include <cstdlib> // For malloc and free
 
-Client::Client(const std::string &serverIp, int serverPort) {
-  connection = new TCPSocket(serverIp, serverPort);
-  serverIp_ = serverIp;
-  serverPort_ = serverPort;
+Client::Client(string myIP, int myport) {
+  this->clientPort = myport;
+  this->clientIP = myIP;
+  connection = new TCPSocket(myIP, myport);
 }
 
 void Client::handleMessage(void *buffer) {
@@ -13,21 +13,20 @@ void Client::handleMessage(void *buffer) {
   if (segment->flags.syn == 1 && segment->flags.ack == 1) {
     std::cout << "Received SYN-ACK. Sending ACK..." << std::endl;
     Segment ackSegment = ack(0, 1);
-    connection->send(serverIp_, serverPort_, &ackSegment, sizeof(ackSegment));
+    connection->send(connection->getIP(), connection->getPort(), &ackSegment,
+                     sizeof(ackSegment));
     std::cout << "Handshake completed!" << std::endl;
   }
 }
 
 void Client::startHandshake() {
-  connection->listen(8081);
+  connection->listen(clientIP, clientPort);
   Segment synSegment = syn(0);
-  connection->send(serverIp_, serverPort_, &synSegment, sizeof(synSegment));
+  connection->send("0.0.0.0", 8080, &synSegment, sizeof(synSegment));
   std::cout << "Sent SYN packet to server." << std::endl;
 
   void *buffer = malloc(sizeof(Segment));
-  std::cout << "sebelum ambl di cli" << std::endl;
   connection->ambil(buffer, sizeof(Segment));
-  std::cout << "sesudah ambl di cli" << std::endl;
   handleMessage(buffer);
   free(buffer);
 }
@@ -38,7 +37,9 @@ void Client::startHandshake() {
 // };
 
 int main() {
-  Client client("127.0.0.1", 8080);
+  string testIP = "127.0.0.1";
+  int testPort = 8081;
+  Client client(testIP, testPort);
   client.startHandshake();
   return 0;
 }
