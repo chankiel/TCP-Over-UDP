@@ -12,6 +12,7 @@ public:
   Client(string myIP, int myport);
   void handleMessage(void *buffer) override;
   void startHandshake();
+  void closeConnection();
 
 private:
   string clientIP;
