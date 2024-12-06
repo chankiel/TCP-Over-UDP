@@ -6,7 +6,7 @@ bool isNumber(const std::string &str)
 }
 
 void commandLine(char symbol, std::string str) {
-    std::cout<<"["<<symbol<<"] "<<str<<std::endl;
+    std::cout<<"["<<symbol<<"] "<< str <<std::endl;
 }
 
 void commandLineHandshakeReceiver(

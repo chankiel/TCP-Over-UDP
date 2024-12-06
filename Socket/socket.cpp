@@ -145,6 +145,7 @@ Message TCPSocket::consumeBuffer(const string &filterIP, uint16_t filterPort,
     auto timeoutPoint = (timeout > 0) ? start + std::chrono::seconds(timeout) : std::chrono::steady_clock::time_point::max();
     while (isListening)
     {
+        // std::cout << packetBuffer.size() << std::endl;
         std::unique_lock<mutex> lock(bufferMutex);
         bufferCondition.wait_for(lock, std::chrono::milliseconds(100), [this]() { return !packetBuffer.empty(); });
         for (auto it = packetBuffer.begin(); it != packetBuffer.end(); ++it)
