@@ -26,18 +26,18 @@ void convertFromBinary(const std::string &binaryFile,
   outFile.close();
 }
 
-int main() {
-  std::string binaryFile, outputFile, extension;
+// int main() {
+//   std::string binaryFile, outputFile, extension;
 
-  std::cout << "Enter binary file: ";
-  std::cin >> binaryFile;
+//   std::cout << "Enter binary file: ";
+//   std::cin >> binaryFile;
 
-  std::cout << "Enter file extension (e.g., .txt, .png, .pdf): ";
-  std::cin >> extension;
+//   std::cout << "Enter file extension (e.g., .txt, .png, .pdf): ";
+//   std::cin >> extension;
 
-  outputFile = "output" + extension;
+//   outputFile = "output" + extension;
 
-  convertFromBinary(binaryFile, outputFile);
+//   convertFromBinary(binaryFile, outputFile);
 
-  return 0;
-}
+//   return 0;
+// }

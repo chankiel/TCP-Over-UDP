@@ -34,15 +34,15 @@ void convertToBinary(const std::string &inputFile,
   outFile.close();
 }
 
-int main() {
-  std::string inputFile, outputFile;
+// int main() {
+//   std::string inputFile, outputFile;
 
-  std::cout << "Masukkan nama file input: ";
-  std::cin >> inputFile;
-  std::cout << "Masukkan nama file output (biner): ";
-  std::cin >> outputFile;
+//   std::cout << "Masukkan nama file input: ";
+//   std::cin >> inputFile;
+//   std::cout << "Masukkan nama file output (biner): ";
+//   std::cin >> outputFile;
 
-  convertToBinary(inputFile, outputFile);
+//   convertToBinary(inputFile, outputFile);
 
-  return 0;
-}
+//   return 0;
+// }
