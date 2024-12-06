@@ -61,10 +61,10 @@ int main(int argc, char *argv[])
         }
     }
 
-    commandLine('i', "Node started at " + ip + ":" + std::to_string(port) + "\n");
-    commandLine('?', "Please chose the operating mode\n");
-    commandLine('?', "1. Sender (Server)\n");
-    commandLine('?', "2. Receiver (Client)\n");
+    commandLine('i', "Node started at " + ip + ":" + std::to_string(port));
+    commandLine('?', "Please chose the operating mode");
+    commandLine('?', "1. Sender (Server)");
+    commandLine('?', "2. Receiver (Client)");
     commandLine('?', "Input: ");
 
     int operating_mode_choice;
@@ -72,12 +72,12 @@ int main(int argc, char *argv[])
 
     if (operating_mode_choice == 1)
     {
-        commandLine('+', "Node is now a sender\n");
+        commandLine('+', "Node is now a sender");
 
-        commandLine('i', "Sender Program’s Initialization\n");
-        commandLine('?', "Please choose the sending mode\n");
-        commandLine('?', "1. User input\n");
-        commandLine('?', "2. File input\n");
+        commandLine('i', "Sender Program’s Initialization");
+        commandLine('?', "Please choose the sending mode");
+        commandLine('?', "1. User input");
+        commandLine('?', "2. File input");
         commandLine('?', "Input: ");
 
         int sending_mode_choice;
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
             std::string userInput;
             std::cin.ignore();
             std::getline(std::cin, userInput);
-            commandLine('+', "User input has been successfully received.\n");
+            commandLine('+', "User input has been successfully received.");
         }
         else if (sending_mode_choice == 2)
         {
@@ -116,11 +116,11 @@ int main(int argc, char *argv[])
 
             if (std::filesystem::exists(transformedFilePath))
             {
-                commandLine('+', "File has been successfully read.\n");
+                commandLine('+', "File has been successfully read.");
             }
             else
             {
-                commandLine('-', "Error: File does not exist at the specified path.\n");
+                commandLine('-', "Error: File does not exist at the specified path.");
                 return 1;
             }
 
@@ -141,22 +141,22 @@ int main(int argc, char *argv[])
             throw std::runtime_error("Invalid sending mode choice");
         }
 
-        commandLine('i', "Listening to the broadcast port for clients.\n");
+        commandLine('i', "Listening to the broadcast port for clients.");
 
         Server server(ip, port);
         server.run();
     }
     else if (operating_mode_choice == 2)
     {
-        commandLine('+', "Node is now a receiver\n");
-        commandLine('?', "Input the server program’s port: ");
+        commandLine('+', "Node is now a receiver");
+        commandLine('?', "Input the server program's port: ");
 
         int serverPort;
         std::cin >> serverPort;
 
-        commandLine('+', "Trying to contact the sender at " + ip + ":" + std::to_string(serverPort) + "\n");
+        commandLine('+', "Trying to contact the sender at " + ip + ":" + std::to_string(serverPort));
 
-        Client client(ip, serverPort);
+        Client client(ip, port,serverPort);
         client.run();
     }
     else
