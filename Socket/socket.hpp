@@ -25,18 +25,19 @@ using std::vector;
 
 constexpr uint32_t DEFAULT_TIMEOUT = 2;
 
-enum class TCPState {
-  LISTENING,
-  SYN_SENT,
-  SYN_RECEIVED,
-  ESTABLISHED,
-  FIN_WAIT_1,
-  FIN_WAIT_2,
-  CLOSE_WAIT,
-  CLOSING,
-  LAST_ACK,
-  TIME_WAIT,
-  CLOSED
+enum class TCPState
+{
+    LISTENING,
+    SYN_SENT,
+    SYN_RECEIVED,
+    ESTABLISHED,
+    FIN_WAIT_1,
+    FIN_WAIT_2,
+    CLOSE_WAIT,
+    CLOSING,
+    LAST_ACK,
+    TIME_WAIT,
+    CLOSED
 };
 
 const std::map<TCPState, std::string> TCPStateDescriptions = {
@@ -53,7 +54,8 @@ const std::map<TCPState, std::string> TCPStateDescriptions = {
     {TCPState::CLOSED, "CLOSED"},
 };
 
-class TCPSocket {
+class TCPSocket
+{
 private:
     string ip;
     int32_t port;
@@ -66,32 +68,33 @@ private:
     std::thread listenerThread;
     SegmentHandler *segmentHandler;
 
-  sockaddr_in createSockAddr(const string &ipAddress, int port);
+    sockaddr_in createSockAddr(const string &ipAddress, int port);
 
 public:
     explicit TCPSocket(const string &ip, int port);
     ~TCPSocket();
-    void TCPSocket::bindSocket();
-    void TCPSocket::listen();
+    void bindSocket();
+    void setBroadcast();
+    void listen();
 
-  void startListening();
-  void stopListening();
+    void startListening();
+    void stopListening();
 
-  bool send(const string &destinationIP, int32_t destinationPort, void *data,
-            uint32_t size);
-  void sendSegment(const Segment &segment, const string &destinationIP,
-                   uint16_t destinationPort);
+    bool send(const string &destinationIP, int32_t destinationPort, void *data,
+              uint32_t size);
+    void sendSegment(const Segment &segment, const string &destinationIP,
+                     uint16_t destinationPort);
 
-  int32_t receive(void *buffer, uint32_t bufferSize, bool peek = false);
+    int32_t receive(void *buffer, uint32_t bufferSize, bool peek = false);
 
     void produceBuffer();
     Message consumeBuffer(const string &filterIP = "", uint16_t filterPort = 0,
                           uint32_t filterSeqNum = 0, uint32_t filterAckNum = 0,
                           uint8_t filterFlags = 0, int timeout = -1);
 
-  void setSocketState(TCPState newState);
-  TCPState getSocketState() const;
-  void close();
+    void setSocketState(TCPState newState);
+    TCPState getSocketState() const;
+    void close();
 };
 
 #endif

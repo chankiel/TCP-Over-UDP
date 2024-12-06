@@ -38,6 +38,17 @@ void TCPSocket::bindSocket()
     }
 }
 
+void TCPSocket::setBroadcast()
+{
+    int enable = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &enable, sizeof(enable)) < 0)
+    {
+        std::cout<<"Broadcast failed"<<std::endl;
+        ::close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+}
+
 sockaddr_in TCPSocket::createSockAddr(const string &ipAddress, int port)
 {
     sockaddr_in address = {};
@@ -88,7 +99,7 @@ void TCPSocket::produceBuffer()
         try
         {
             uint8_t *dataBuffer = new uint8_t[MAX_SEGMENT_SIZE];
-            sockaddr_in clientAddress = {};
+            sockaddr_in clientAddress;
             socklen_t addressLength = sizeof(clientAddress);
 
             int bytesRead = recvfrom(sockfd, dataBuffer, MAX_SEGMENT_SIZE, 0, (struct sockaddr *)&clientAddress, &addressLength);
@@ -103,10 +114,10 @@ void TCPSocket::produceBuffer()
             Segment segment = decodeSegment(dataBuffer, bytesRead);
             delete[] dataBuffer;
 
-            if (!isValidChecksum(segment))
-            {
-                continue;
-            }
+            // if (!isValidChecksum(segment))
+            // {
+            //     continue;
+            // }
 
             Message message(inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port), segment);
 
@@ -137,7 +148,7 @@ Message TCPSocket::consumeBuffer(const string &filterIP, uint16_t filterPort,
     {
         std::unique_lock<mutex> lock(bufferMutex);
         bufferCondition.wait_for(lock, std::chrono::milliseconds(100), [this]() { return !packetBuffer.empty(); });
-
+        std::cout<<packetBuffer.size()<<std::endl;
         for (auto it = packetBuffer.begin(); it != packetBuffer.end(); ++it)
         {
             const auto &msg = *it;
@@ -152,6 +163,7 @@ Message TCPSocket::consumeBuffer(const string &filterIP, uint16_t filterPort,
                 return result;
             }
         }
+        // std::cout<<timeout<<std::endl;
 
         if (timeout > 0 && std::chrono::steady_clock::now() > timeoutPoint)
         {

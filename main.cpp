@@ -2,16 +2,8 @@
 #include <string>
 #include <cctype>
 #include <algorithm>
-#include "server.hpp"
-#include "client.hpp"
-
-bool isNumber(const std::string& str) {
-    return !str.empty() && std::all_of(str.begin(), str.end(), ::isdigit);
-}
-
-void commandLine(char symbol, std::string str) {
-    std::cout<<"["<<symbol<<"] "<<str;
-}
+#include "Node/server.hpp"
+#include "Node/client.hpp"
 
 int main(int argc, char* argv[]) {
     // Default values

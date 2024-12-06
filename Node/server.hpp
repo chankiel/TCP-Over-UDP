@@ -12,7 +12,7 @@
 
 class Server : public Node {
 public:
-  Server(string ip, int port): Node(ip,port){}
+  Server(string ip, int port): Node("0.0.0.0",port){}
   void run() override;
 
   ConnectionResult respondHandshake(string dest_ip, uint16_t dest_port);
