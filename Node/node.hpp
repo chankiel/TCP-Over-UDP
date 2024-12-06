@@ -19,7 +19,6 @@ public:
   Node(string ip, uint16_t port);
   ~Node();
   virtual void run() = 0;
-  virtual void handleMessage(void *buffer, int sizeBuffer) = 0;
 };
 
 #endif

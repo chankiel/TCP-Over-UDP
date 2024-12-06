@@ -35,10 +35,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Display the result
-    std::cout << "IP Address: " << ip << "\n";
-    std::cout << "Port: " << port << "\n";
-
     commandLine('i', "Node started at " + ip +":"+std::to_string(port)+"\n");
     commandLine('?', "Please chose the operating mode\n");
     commandLine('?', "1. Sender (Server)\n");
@@ -49,11 +45,11 @@ int main(int argc, char* argv[]) {
     if(operating_mode_choice == 1) {
         commandLine('+', "Node is now a sender\n");
         Server server(ip,port);
-        server.startServer();
+        server.run();
     } else if(operating_mode_choice == 2) {
         commandLine('+', "Node is now a receiver\n");
         Client client(ip, port);
-        client.startHandshake();
+        client.run();
     } else {
         throw std::runtime_error("Invalid argument");
     }

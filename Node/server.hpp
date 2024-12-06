@@ -12,8 +12,7 @@
 class Server : public Node {
 public:
   Server(string ip, int port): Node(ip,port){}
-  void handleMessage(void *buffer,int sizeBuffer) override;
-  void run();
+  void run() override;
 
   ConnectionResult listenBroadcast(string dest_ip, uint16_t dest_port);
   ConnectionResult respondHandshake(string dest_ip, uint16_t );
