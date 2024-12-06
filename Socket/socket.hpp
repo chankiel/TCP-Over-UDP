@@ -73,6 +73,7 @@ private:
 public:
     explicit TCPSocket(const string &ip, int port);
     ~TCPSocket();
+    void TCPSocket::bindSocket();
 
     void startListening();
     void stopListening();
