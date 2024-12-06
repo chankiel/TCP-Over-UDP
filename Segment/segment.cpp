@@ -62,9 +62,10 @@ Segment ack(uint32_t seqNum, uint32_t ackNum) {
 /**
  * Generate a Segment containing a SYN-ACK packet
  */
-Segment synAck(uint32_t seqNum) {
+Segment synAck(uint32_t seqNum,uint32_t ackNum) {
   Segment segment;
   segment.seqNum = seqNum;
+  segment.ackNum = ackNum;
   segment.flags.syn = 1;
   segment.flags.ack = 1;
   segment.payloadSize = 0;
@@ -74,8 +75,10 @@ Segment synAck(uint32_t seqNum) {
 /**
  * Generate a Segment containing a FIN packet
  */
-Segment fin() {
+Segment fin(uint32_t seqNum,uint32_t ackNum) {
   Segment segment;
+  segment.seqNum = seqNum;
+  segment.ackNum = ackNum;
   segment.flags.fin = 1;
   segment.payloadSize = 0;
   return segment;
@@ -84,8 +87,10 @@ Segment fin() {
 /**
  * Generate a Segment containing a FIN-ACK packet
  */
-Segment finAck() {
+Segment finAck(uint32_t seqNum,uint32_t ackNum) {
   Segment segment;
+  segment.seqNum = seqNum;
+  segment.ackNum = ackNum;
   segment.flags.fin = 1;
   segment.flags.ack = 1;
   segment.payloadSize = 0;
