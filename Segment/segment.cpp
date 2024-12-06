@@ -309,3 +309,19 @@ Segment decodeSegment(const uint8_t *buffer, uint32_t length)
   }
   return segment;
 }
+
+uint8_t getFlags8(const Segment *segment) {
+    uint8_t result = 0;
+
+    // Combine flags into a single byte
+    result |= (segment->flags.cwr << 7);
+    result |= (segment->flags.ece << 6);
+    result |= (segment->flags.urg << 5);
+    result |= (segment->flags.ack << 4);
+    result |= (segment->flags.psh << 3);
+    result |= (segment->flags.rst << 2);
+    result |= (segment->flags.syn << 1);
+    result |= (segment->flags.fin);
+
+    return result;
+}
