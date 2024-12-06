@@ -8,6 +8,7 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#include "../tools/tools.hpp"
 
 class Server : public Node {
 public:
@@ -15,10 +16,9 @@ public:
   void handleMessage(void *buffer, int sizeBuffer) override;
   void run();
 
+  ConnectionResult respondHandshake(string dest_ip, uint16_t dest_port);
+  ConnectionResult respondFin(string dest_ip, uint16_t dest_port, uint32_t seqNum);
   ConnectionResult listenBroadcast();
-  ConnectionResult respondHandshake(string dest_ip, uint16_t);
-  ConnectionResult respondFin(string dest_ip, uint16_t dest_port,
-                              uint32_t seqNum);
 };
 
 #endif // SERVER_HPP
