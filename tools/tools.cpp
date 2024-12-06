@@ -27,3 +27,12 @@ void commandLineHandshakeReceiver(
         std::cout<<"Ben Ganteng\n";
     }
 }
+
+int generateRandomNumber(int min, int max) {
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::default_random_engine engine(seed);    
+    std::uniform_int_distribution<int> distribution(min, max);
+    return distribution(engine);
+}
+
+
