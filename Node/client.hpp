@@ -16,7 +16,7 @@ public:
 
   ConnectionResult findBroadcast(string dest_ip, uint16_t dest_port);
   ConnectionResult startHandshake(string dest_ip, uint16_t dest_port);
-  ConnectionResult startFin(string dest_ip, uint16_t dest_port, uint32_t seqNum); 
+  ConnectionResult startFin(string dest_ip, uint16_t dest_port, uint32_t seqNum,uint32_t ackNum); 
 };
 
 #endif // CLIENT_HPP
