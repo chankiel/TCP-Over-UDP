@@ -3,6 +3,7 @@
 
 #include "../Segment/segment.hpp"
 #include "../Segment/segment_handler.hpp"
+#include "../Socket/connection_result.hpp"
 #include <arpa/inet.h>
 #include <condition_variable>
 #include <cstring>

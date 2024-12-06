@@ -8,15 +8,22 @@
 #include <iostream>
 #include <thread>
 
-class Client : public Node {
+class Client : public Node
+{
 public:
-  Client(const std::string &serverIp, int serverPort): Node(serverIp,serverPort){}
+  Client(const std::string &myIP, int myport) : Node(myIP, myport) {}
+  void run() override;
   void handleMessage(void *buffer, int sizeBuffer) override;
-  void startClient();
-  void startHandshake();
+
+  ConnectionResult findBroadcast(string dest_ip, uint16_t dest_port);
+  ConnectionResult startHandshake(string dest_ip, uint16_t );
+  ConnectionResult startFin(string dest_ip, uint16_t dest_port, uint32_t seqNum); 
+
+  void closeConnection();
 
 private:
-  uint16_t servPort;
+  std::string serverIp_;
+  int serverPort_;
 };
 
 #endif // CLIENT_HPP

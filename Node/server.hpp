@@ -7,18 +7,17 @@
 #include <iostream>
 #include <string>
 #include "../Socket/socket.hpp"
+#include "../Socket/connection_result.hpp"
 
 class Server : public Node {
 public:
-  Server(int port): Node("127.0.0.1",8080){}
+  Server(string ip, int port): Node(ip,port){}
   void handleMessage(void *buffer,int sizeBuffer) override;
   void run();
 
-private:
-  int port_;
-  std::string clientIp_ = "127.0.0.1"; // For simplicity, assuming a local client.
-  int clientPort_ = 8081;              // Example client port.
-  TCPSocket *connection;               // TCP connection object
+  ConnectionResult listenBroadcast(string dest_ip, uint16_t dest_port);
+  ConnectionResult respondHandshake(string dest_ip, uint16_t );
+  ConnectionResult respondFin(string dest_ip, uint16_t dest_port, uint32_t seqNum);
 };
 
 #endif // SERVER_HPP
