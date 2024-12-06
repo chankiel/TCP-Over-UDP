@@ -2,47 +2,81 @@
 #include <iostream>
 #include <ostream>
 #include <string>
+#include <bitset>
+#include "../Node/server.hpp"
 
-void convertToBinary(const std::string &inputFile,
-                     const std::string &outputFile) {
-  std::ifstream inFile(inputFile, std::ios::binary);
-  if (!inFile) {
-    std::cerr << "Error: Tidak dapat membuka file input: " << inputFile
-              << std::endl;
+void convertToBinary(const std::string &inputFile, const std::string &outputFile)
+{
+  std::ifstream input(inputFile, std::ios::binary);
+  if (!input)
+  {
+    std::cerr << "Error: Unable to open input file: " << inputFile << std::endl;
     return;
   }
 
-  std::ofstream outFile(outputFile, std::ios::binary);
-  if (!outFile) {
-    std::cerr << "Error: Tidak dapat membuat file output: " << outputFile
-              << std::endl;
+  std::ofstream output(outputFile, std::ios::binary);
+  if (!output)
+  {
+    std::cerr << "Error: Unable to open output file: " << outputFile << std::endl;
     return;
   }
 
-  outFile << inFile.rdbuf();
+  char byte;
+  while (input.read(&byte, sizeof(byte)))
+  {
+    std::bitset<8> binary(byte);
+    output << binary.to_string();
+  }
 
-  // testing
-  inFile.seekg(1, std::ios::beg);
-  char s[12];
-  inFile.read(s, 12);
-  std::cout << s << std::endl;
+  input.close();
+  output.close();
 
-  std::cout << "File berhasil dikonversi ke format biner: " << outputFile
-            << std::endl;
-
-  inFile.close();
-  outFile.close();
+  std::cout << "Conversion complete. Binary data written to " << outputFile << std::endl;
 }
 
-// int main() {
-//   std::string inputFile, outputFile;
+void convertToFileContentAndSetItem(const std::string &inputFile, Server &server)
+{
+  std::ifstream input(inputFile);
+  if (!input)
+  {
+    std::cerr << "Error: Unable to open input file: " << inputFile << std::endl;
+    return;
+  }
 
-//   std::cout << "Masukkan nama file input: ";
-//   std::cin >> inputFile;
-//   std::cout << "Masukkan nama file output (biner): ";
-//   std::cin >> outputFile;
+  std::string fileContent((std::istreambuf_iterator<char>(input)),
+                          std::istreambuf_iterator<char>());
 
-//   convertToBinary(inputFile, outputFile);
+  server.setItem(fileContent);
 
-//   return 0;
-// }
+  std::cout << "File content successfully set in the server item." << std::endl;
+
+  input.close();
+}
+
+void convertToBinaryAndSetItem(const std::string &inputFile, Server &server)
+{
+  std::ifstream input(inputFile, std::ios::binary);
+  if (!input)
+  {
+    std::cerr << "Error: Unable to open input file: " << inputFile << std::endl;
+    return;
+  }
+  // std::cout << "1" << std::endl;
+  std::string binaryString;
+  char byte;
+  // std::cout << "2" << std::endl;
+  while (input.read(&byte, sizeof(byte)))
+  {
+    std::bitset<8> binary(byte);
+    binaryString += binary.to_string();
+  }
+  // std::cout << "3" << std::endl;
+
+  server.setItemFromBin(binaryString);
+  // std::cout << binaryString << std::endl;
+  // std::cout << "4" << std::endl;
+
+  std::cout << "Binary data successfully set in the server item." << std::endl;
+
+  input.close();
+}

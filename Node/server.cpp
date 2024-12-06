@@ -3,7 +3,7 @@
 #include <stdexcept>
 
 int SERVER_BROADCAST_TIMEOUT = 3; // temporary
-int SERVER_COMMON_TIMEOUT = 24;    // temporary
+int SERVER_COMMON_TIMEOUT = 24;   // temporary
 int SERVER_MAX_TRY = 10;
 
 ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port)
@@ -61,7 +61,7 @@ ConnectionResult Server::listenBroadcast()
     {
       Message answer =
           connection->consumeBuffer("", 0, 0, 0, 0, SERVER_BROADCAST_TIMEOUT);
-      std::cout<<answer.ip<<std::endl;
+      std::cout << answer.ip << std::endl;
       commandLine('+', "Received Broadcast Message\n");
       Segment temp = accBroad();
       connection->sendSegment(temp, answer.ip, answer.port);
@@ -78,9 +78,12 @@ ConnectionResult Server::listenBroadcast()
 }
 
 ConnectionResult Server::respondFin(string dest_ip, uint16_t dest_port,
-                                    uint32_t seqNum) {
-  for (int i = 0; i < SERVER_MAX_TRY; i++) {
-    try {
+                                    uint32_t seqNum)
+{
+  for (int i = 0; i < SERVER_MAX_TRY; i++)
+  {
+    try
+    {
       // Rec FIN
       Message rec_fin = connection->consumeBuffer(dest_ip, dest_port, 0, 0,
                                                   FIN_FLAG, SERVER_COMMON_TIMEOUT);
@@ -102,14 +105,15 @@ ConnectionResult Server::respondFin(string dest_ip, uint16_t dest_port,
       commandLine('+', "[Closing] Received ACK request from  " + dest_ip +
                            to_string(dest_port) + "\n");
       commandLine('i', "Connection Closed\n");
-      return ConnectionResult(true, dest_ip, dest_port,0,0);
-    } catch (const std::runtime_error &e)
+      return ConnectionResult(true, dest_ip, dest_port, 0, 0);
+    }
+    catch (const std::runtime_error &e)
     {
       commandLine('x', "Timeout " + std::to_string(i + 1) + "\n");
       continue;
     }
   }
-  return ConnectionResult(false, dest_ip, dest_port,0,0);
+  return ConnectionResult(false, dest_ip, dest_port, 0, 0);
 }
 
 void Server::run()

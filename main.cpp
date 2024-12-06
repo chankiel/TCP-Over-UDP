@@ -6,6 +6,9 @@
 #include <algorithm>
 #include "Node/server.hpp"
 #include "Node/client.hpp"
+#include "tools/fileSender.hpp"
+#include "tools/fileReceiver.hpp"
+#include "Segment/segment.hpp"
 
 std::string transformFilePath(const std::string &filePath)
 {
@@ -61,6 +64,8 @@ int main(int argc, char *argv[])
         }
     }
 
+    Server server(ip, port);
+
     commandLine('i', "Node started at " + ip + ":" + std::to_string(port) + "\n");
     commandLine('?', "Please chose the operating mode\n");
     commandLine('?', "1. Sender (Server)\n");
@@ -89,6 +94,8 @@ int main(int argc, char *argv[])
             std::string userInput;
             std::cin.ignore();
             std::getline(std::cin, userInput);
+            server.setItem(userInput);                  // set item (boleh pindah tempat lain kalo mau)
+            std::cout << server.getItem() << std::endl; // checking aja
             commandLine('+', "User input has been successfully received.\n");
         }
         else if (sending_mode_choice == 2)
@@ -100,41 +107,18 @@ int main(int argc, char *argv[])
 
             std::string transformedFilePath = transformFilePath(filePath);
 
-            // std::cout << "Transformed file path: " << transformedFilePath << std::endl;
-
-            // if (fileExists(filePath))
-            // {
-            //     commandLine('+', "File has been successfully read.\n");
-            // }
-            // else
-            // {
-            //     commandLine('-', "Error: File does not exist at the specified path.\n");
-            //     return 1;
-            // }
-
-            // std::string filePath2 = "D:\\Personal Doc\\College\\Actual College\\Prak\\Prak 0 SBD\\P00_G00_13522043.docx";
-
             if (std::filesystem::exists(transformedFilePath))
             {
                 commandLine('+', "File has been successfully read.\n");
+                convertToFileContentAndSetItem(transformedFilePath, server);
+                std::cout << server.getItem() << std::endl; // checking aja
+                // std::cout << server.getItem().length() << std::endl;
             }
             else
             {
                 commandLine('-', "Error: File does not exist at the specified path.\n");
                 return 1;
             }
-
-            // std::ifstream file(filePath);
-            // if (file.is_open())
-            // {
-            //     commandLine('+', "File has been successfully read.\n");
-            //     file.close();
-            // }
-            // else
-            // {
-            //     commandLine('-', "Error: File does not exist at the specified path.\n");
-            //     return 1;
-            // }
         }
         else
         {
@@ -143,7 +127,6 @@ int main(int argc, char *argv[])
 
         commandLine('i', "Listening to the broadcast port for clients.\n");
 
-        Server server(ip, port);
         server.run();
     }
     else if (operating_mode_choice == 2)
