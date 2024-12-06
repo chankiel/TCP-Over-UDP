@@ -2,13 +2,7 @@
 #include "tools.hpp"
 #include <cstdlib> // For malloc and free
 
-Client::Client(string myIP, int myport) {
-  this->clientPort = myport;
-  this->clientIP = myIP;
-  connection = new TCPSocket(myIP, myport);
-}
-
-void Client::handleMessage(void *buffer) {
+void Client::handleMessage(void *buffer, int sizeBuffer) {
   Segment *segment = static_cast<Segment *>(buffer);
 
   // Handling SYN-ACK
@@ -82,16 +76,22 @@ void Client::startHandshake() {
 //   int serverPort_;
 // };
 
+void Client::run(){
+  cout<<"HEHE"<<endl;
+}
+
+
+
 int main_client() {
-  string testIP = "127.0.0.1";
-  int testPort = 8081;
-  Client client(testIP, testPort);
+  // string testIP = "127.0.0.1";
+  // int testPort = 8081;
+  // Client client(testIP, testPort);
 
-  client.startHandshake();
+  // client.startHandshake();
 
-  // Simulate data exchange...
-  // std::this_thread::sleep_for(std::chrono::seconds(2));
+  // // Simulate data exchange...
+  // // std::this_thread::sleep_for(std::chrono::seconds(2));
 
-  client.closeConnection();
+  // client.closeConnection();
   return 0;
 }
