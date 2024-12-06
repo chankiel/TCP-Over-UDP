@@ -1,6 +1,9 @@
 #include "client.hpp"
 #include "tools.hpp"
+#include "../Socket/socket.hpp"
+#include "../tools/tools.hpp"
 #include <cstdlib> // For malloc and free
+#include <random>
 
 void Client::handleMessage(void *buffer, int sizeBuffer) {
   Segment *segment = static_cast<Segment *>(buffer);
@@ -54,21 +57,48 @@ void Client::closeConnection() {
 }
 
 void Client::startHandshake() {
-  int synchornization = 0;
-  std::string ip_handshake = "0.0.0.0";
-  int port_handshake = 8080;
-  connection->listen(clientIP, clientPort);
-  Segment synSegment = syn(synchornization);
-  commandLine('i', "[Handshake] [S=" + std::to_string(synchornization) +
-                       "] Sending SYN request to " + ip_handshake + ":" +
-                       std::to_string(port_handshake) + "\n");
-  connection->send(ip_handshake, port_handshake, &synSegment,
-                   sizeof(synSegment));
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<uint32_t> dist(0, 4294967295);
 
-  void *buffer = malloc(sizeof(Segment));
-  connection->ambil(buffer, sizeof(Segment));
-  handleMessage(buffer);
-  free(buffer);
+  uint32_t r_seq_num = dist(gen);
+
+  commandLine('i', "Sender Program’s Three Way Handshake\n");
+
+  Segment synSegment = syn(r_seq_num);
+
+  for (int i = 0; i < 10; i++)
+  {
+    try {
+      // Send syn?
+      connection->sendSegment(synSegment, serverIp_, serverPort_);
+      connection->setSocketState(TCPState::SYN_SENT);
+
+      commandLine('i', "[Established] [Seg 1] [S=" + std::to_string(r_seq_num) + "] Sending SYN request to " + serverIp_ + ":" + std::to_string(serverPort_) + "\n");
+
+      // Wait syn-ack?
+      Message result = connection->consumeBuffer(serverIp_, serverPort_, 0, r_seq_num + 1, SYN_ACK_FLAG, 10);
+      Segment synAckSegment = result.segment;
+
+      connection->setSocketState(TCPState::ESTABLISHED);
+
+      commandLine('~', "[Established] Waiting for segments to be ACKed\n");
+      commandLine('i', "[Established] [Seg 1] [S=" + std::to_string(synAckSegment.seqNum) + "] [A=" + std::to_string(synAckSegment.ackNum) + "] Received SYN-ACK request from " + synAckSegment.ip + ":" + std::to_string(synAckSegment.port) + "\n");
+
+      // Send ack?
+      uint32_t ackNum = synAckSegment.seqNum + 1;
+      Segment ackSegment = ack(r_seq_num + 1, ackNum);
+      connection->sendSegment(ackSegment, serverIp_, serverPort_);
+      commandLine('i', "[Established] [Seg 2] [A=" + std::to_string(ackNum) + "] Sending ACK request to " + serverIp_ + ":" + std::to_string(serverPort_) + "\n");
+      commandLine('i', "[Established] [Seg 2] [A=" + std::to_string(ackNum) + "] Sent\n");
+      commandLine('~', "Ready to receive input from " + serverIp_ + ":" + std::to_string(serverPort_) + "\n");
+      return;
+
+    } catch (const std::exception &e) {
+      commandLine('e', "[Handshake] Attempt failed: " + std::string(e.what()) + "\n");
+    }
+  }
+  commandLine('e', "[Handshake] Failed after 10 retries\n");
 }
 
 // private:
