@@ -8,6 +8,7 @@
 #include <string>
 #include "../Socket/socket.hpp"
 #include "../Socket/connection_result.hpp"
+#include "../tools/tools.hpp"
 
 class Server : public Node {
 public:
@@ -16,7 +17,7 @@ public:
   void run();
 
   ConnectionResult listenBroadcast(string dest_ip, uint16_t dest_port);
-  ConnectionResult respondHandshake(string dest_ip, uint16_t );
+  ConnectionResult respondHandshake(string dest_ip, uint16_t dest_port);
   ConnectionResult respondFin(string dest_ip, uint16_t dest_port, uint32_t seqNum);
 };
 
