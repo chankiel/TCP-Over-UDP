@@ -159,4 +159,9 @@ void encodeSegment(const Segment &segment, uint8_t *buffer);
  */
 Segment decodeSegment(const uint8_t *buffer, uint32_t length);
 
+/**
+ * Change flags to uint8_t
+ */
+uint8_t getFlags8(const Segment *segment);
+
 #endif
