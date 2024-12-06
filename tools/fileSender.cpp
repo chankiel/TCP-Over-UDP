@@ -34,6 +34,7 @@ void convertToBinary(const std::string &inputFile, const std::string &outputFile
   std::cout << "Conversion complete. Binary data written to " << outputFile << std::endl;
 }
 
+// Ini dipake buat dapetin string dari file yang dikasih, trus disimpan di attribut item di server
 void convertToFileContentAndSetItem(const std::string &inputFile, Server &server)
 {
   std::ifstream input(inputFile);
@@ -53,6 +54,7 @@ void convertToFileContentAndSetItem(const std::string &inputFile, Server &server
   input.close();
 }
 
+// MUNGKIN GAKEPAKE
 void convertToBinaryAndSetItem(const std::string &inputFile, Server &server)
 {
   std::ifstream input(inputFile, std::ios::binary);
@@ -61,20 +63,15 @@ void convertToBinaryAndSetItem(const std::string &inputFile, Server &server)
     std::cerr << "Error: Unable to open input file: " << inputFile << std::endl;
     return;
   }
-  // std::cout << "1" << std::endl;
   std::string binaryString;
   char byte;
-  // std::cout << "2" << std::endl;
   while (input.read(&byte, sizeof(byte)))
   {
     std::bitset<8> binary(byte);
     binaryString += binary.to_string();
   }
-  // std::cout << "3" << std::endl;
 
   server.setItemFromBin(binaryString);
-  // std::cout << binaryString << std::endl;
-  // std::cout << "4" << std::endl;
 
   std::cout << "Binary data successfully set in the server item." << std::endl;
 

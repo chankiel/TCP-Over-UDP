@@ -15,7 +15,7 @@ ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port)
   {
     try
     {
-      Segment temp = createSegment("AWD",port,dest_port);
+      Segment temp = createSegment("AWD", port, dest_port);
 
       connection->sendSegment(temp, dest_ip, dest_port);
       commandLine('i', "Sending Broadcast\n");
@@ -35,9 +35,12 @@ ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port)
 }
 
 ConnectionResult Client::startFin(string dest_ip, uint16_t dest_port,
-                                  uint32_t seqNum) {
-  for (int i = 0; i < CLIENT_MAX_TRY; i++) {
-    try {
+                                  uint32_t seqNum)
+{
+  for (int i = 0; i < CLIENT_MAX_TRY; i++)
+  {
+    try
+    {
       // Send FIN
       Segment finSeg = fin();
       connection->sendSegment(finSeg, dest_ip, dest_port);
@@ -62,13 +65,14 @@ ConnectionResult Client::startFin(string dest_ip, uint16_t dest_port,
                            to_string(dest_port) + "\n");
 
       commandLine('i', "Connection Closed\n");
-      return ConnectionResult(true, dest_ip, dest_port,0,0);
-    } catch (const std::runtime_error &e)
+      return ConnectionResult(true, dest_ip, dest_port, 0, 0);
+    }
+    catch (const std::runtime_error &e)
     {
       commandLine('x', "Timeout " + std::to_string(i + 1) + "\n");
     }
   }
-  return ConnectionResult(false, dest_ip, dest_port,0,0);
+  return ConnectionResult(false, dest_ip, dest_port, 0, 0);
 }
 
 ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
@@ -79,8 +83,10 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
 
   Segment synSegment = syn(r_seq_num);
 
-  for (int i = 0; i < 10; i++) {
-    try {
+  for (int i = 0; i < 10; i++)
+  {
+    try
+    {
       // Send syn?
       connection->sendSegment(synSegment, dest_ip, dest_port);
       connection->setSocketState(TCPState::SYN_SENT);

@@ -120,6 +120,7 @@ void Server::run()
 {
   connection->listen();
   connection->startListening();
+
   ConnectionResult statusBroadcast = listenBroadcast();
   if (statusBroadcast.success)
   {

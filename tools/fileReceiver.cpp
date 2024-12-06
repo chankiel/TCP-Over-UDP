@@ -2,6 +2,8 @@
 #include <fstream>
 #include <bitset>
 #include <sstream>
+#include "../Node/client.hpp"
+#include "../Node/server.hpp"
 
 void convertFromBinary(const std::string &binaryFile, const std::string &outputFile)
 {
@@ -40,4 +42,42 @@ void convertFromBinary(const std::string &binaryFile, const std::string &outputF
   // Close the files
   inFile.close();
   outFile.close();
+}
+
+// Ini dipake stelah client dapat stringnya yg disimpan di atribut item
+void convertFromClientToFile(const std::string &outputFile, Client &client)
+{
+  std::ofstream output(outputFile);
+  if (!output)
+  {
+    std::cerr << "Error: Unable to open output file: " << outputFile << std::endl;
+    return;
+  }
+
+  std::string clientItem = client.getItem();
+
+  output << clientItem;
+
+  std::cout << "Client content successfully written to the file: " << outputFile << std::endl;
+
+  output.close();
+}
+
+// FOR TESTING PURPOSES
+void convertFromServerToFile(const std::string &outputFile, Server &server)
+{
+  std::ofstream output(outputFile);
+  if (!output)
+  {
+    std::cerr << "Error: Unable to open output file: " << outputFile << std::endl;
+    return;
+  }
+
+  std::string serverItem = server.getItem();
+
+  output << serverItem;
+
+  std::cout << "Server content successfully written to the file: " << outputFile << std::endl;
+
+  output.close();
 }

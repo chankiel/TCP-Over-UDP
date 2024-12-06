@@ -94,8 +94,7 @@ int main(int argc, char *argv[])
             std::string userInput;
             std::cin.ignore();
             std::getline(std::cin, userInput);
-            server.setItem(userInput);                  // set item (boleh pindah tempat lain kalo mau)
-            std::cout << server.getItem() << std::endl; // checking aja
+            server.setItem(userInput); // set item (boleh pindah tempat lain kalo mau)
             commandLine('+', "User input has been successfully received.\n");
         }
         else if (sending_mode_choice == 2)
@@ -110,9 +109,39 @@ int main(int argc, char *argv[])
             if (std::filesystem::exists(transformedFilePath))
             {
                 commandLine('+', "File has been successfully read.\n");
-                convertToFileContentAndSetItem(transformedFilePath, server);
-                std::cout << server.getItem() << std::endl; // checking aja
-                // std::cout << server.getItem().length() << std::endl;
+                convertToFileContentAndSetItem(transformedFilePath, server); // udah include setItem di server
+
+                // INI KALAU MAU DI SERVER MINTA NAMA FILE DAN EXTENSION
+
+                // commandLine('?', "Please enter the desired file name (without extension): ");
+                // std::string fileName;
+                // std::cin.ignore();
+                // std::getline(std::cin, fileName);
+
+                // commandLine('?', "Please enter the desired file extension: ");
+                // std::string fileExtension;
+                // std::cin.ignore();
+                // std::getline(std::cin, fileExtension);
+
+                // INI KALAU MAU DI SERVER AUTO DAPAT NAMAFILE DAN EXTENSION - SEKARANG ASUMSI INI DLU.
+
+                std::filesystem::path filePathObj(transformedFilePath);
+                std::string fileName = filePathObj.stem().string();
+                std::string fileExtension = filePathObj.extension().string();
+
+                if (!fileExtension.empty() && fileExtension[0] == '.')
+                {
+                    fileExtension.erase(0, 1);
+                }
+
+                // ----------------
+
+                server.setFileName(fileName);
+                server.setFileEx(fileExtension);
+
+                // SERVER HERE ONLY FOR TESTING PURPOSES
+                // std::string fullFileName = fileName + "." + fileExtension;
+                // convertFromServerToFile(fullFileName, server);
             }
             else
             {
@@ -140,7 +169,24 @@ int main(int argc, char *argv[])
         commandLine('+', "Trying to contact the sender at " + ip + ":" + std::to_string(serverPort) + "\n");
 
         Client client(ip, serverPort);
+
+        // UTK SEKARANG MINTA DULU JUST IN CASE
+        commandLine('?', "Please enter the desired file name (without extension): ");
+        std::string requestedFileName;
+        std::cin.ignore();
+        std::getline(std::cin, requestedFileName);
+
+        commandLine('?', "Please enter the desired file extension: ");
+        std::string requestedFileExtension;
+        std::cin.ignore();
+        std::getline(std::cin, requestedFileExtension);
+
+        client.setFileName(requestedFileName);
+        client.setFileEx(requestedFileExtension);
+
         client.run();
+
+        // convertFromClientToFile(fullFileName, client);
     }
     else
     {
