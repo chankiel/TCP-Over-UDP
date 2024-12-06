@@ -1,9 +1,8 @@
-# Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall
 
 # Define the source files and the object files
-SOURCES = $(wildcard *.cpp)
+SOURCES = $(wildcard */*.cpp) $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
 
 # Define the output executable
@@ -24,7 +23,12 @@ $(EXEC): $(OBJECTS)
 clean:
 	rm -f $(OBJECTS) $(EXEC)
 
+# Rule to clean and rebuild everything
+rebuild: clean all
+
 # Run the main program with the specified host and port arguments
 run: $(EXEC)
 	./$(EXEC) node $(host) $(port)
 
+# Declare phony targets
+.PHONY: all clean rebuild run
