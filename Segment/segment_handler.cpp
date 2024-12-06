@@ -63,3 +63,18 @@ void SegmentHandler::ackWindow(uint8_t size) {
 uint32_t SegmentHandler::getCurrentSeqNum() { return currentSeqNum; }
 
 uint32_t SegmentHandler::getCurrentAckNum() { return currentAckNum; }
+
+void SegmentHandler::addStatusSegment(uint8_t handshakeType, uint32_t seqNum,
+                                      uint32_t ackNum) {
+  if (handshakeType == 1) {
+    segmentBuffer.push_back(syn(seqNum));
+  } else if (handshakeType == 2) {
+    segmentBuffer.push_back(synAck(seqNum));
+  } else if (handshakeType == 3) {
+    segmentBuffer.push_back(ack(seqNum, ackNum));
+  } else if (handshakeType == 4) {
+    segmentBuffer.push_back(fin());
+  } else if (handshakeType == 5) {
+    segmentBuffer.push_back(finAck());
+  }
+}
