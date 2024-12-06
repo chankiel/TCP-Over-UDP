@@ -18,6 +18,15 @@ TCPSocket::~TCPSocket()
     close();
 }
 
+void TCPSocket::bindSocket()
+{
+    struct sockaddr_in sockAddr = createSockAddr(localIP, localPort);
+    if (bind(sockfd, (const struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0)
+    {
+        exit(EXIT_FAILURE);
+    }
+}
+
 sockaddr_in TCPSocket::createSockAddr(const string &ipAddress, int port)
 {
     sockaddr_in address = {};

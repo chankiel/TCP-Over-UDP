@@ -1,59 +1,31 @@
 #include "client.hpp"
-#include "tools.hpp"
+#include <stdexcept>
+#include <string>
 #include "../Socket/socket.hpp"
 #include "../tools/tools.hpp"
 #include <cstdlib> // For malloc and free
 #include <random>
+int BROADCAST_TIMEOUT = 30; // temporary
+int MAX_TRY = 10;
 
-void Client::handleMessage(void *buffer, int sizeBuffer) {
-  Segment *segment = static_cast<Segment *>(buffer);
+ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port) {
+  for (int i = 0; i < MAX_TRY; i++) {
+    try {
+      Segment temp = broad();
 
-  // Handling SYN-ACK
-  if (segment->flags.syn == 1 && segment->flags.ack == 1) {
-    Segment ackSegment = ack(0, segment->seqNum + 1);
-    commandLine('i', "[Handshake] [S=" + std::to_string(ackSegment.seqNum) +
-                         "] [A=" + std::to_string(ackSegment.ackNum) +
-                         "] Received SYN-ACK\n");
-    connection->send(connection->getIP(), connection->getPort(), &ackSegment,
-                     sizeof(ackSegment));
-    commandLine('i', "[Handshake] Sent ACK. Connection established.\n");
+      connection->sendSegment(temp, dest_ip, dest_port);
+      commandLine('i', "Sending Broadcast\n");
+      Message answer =
+          connection->consumeBuffer("", 0, 0, 0, 255, BROADCAST_TIMEOUT);
+      commandLine('i', "Someone received the broadcast\n");
+      return ConnectionResult(1, answer.ip, answer.port, answer.segment.seqNum,
+                              answer.segment.ackNum);
+    } catch (runtime_error()) {
+      commandLine('x', "Timeout " + std::to_string(i + 1) + "\n");
+      continue;
+    }
   }
-
-  // Handling FIN
-  else if (segment->flags.fin == 1 && segment->flags.ack == 0) {
-    commandLine('i', "[Close] Received FIN from " + connection->getIP() + ":" +
-                         std::to_string(connection->getPort()) + "\n");
-
-    // Send ACK
-    Segment ackSegment = ack(0, segment->seqNum + 1);
-    connection->send(connection->getIP(), connection->getPort(), &ackSegment,
-                     sizeof(ackSegment));
-    commandLine('i', "[Close] Sent ACK for FIN\n");
-
-    // Send FIN
-    Segment finSegment = fin();
-    connection->send(connection->getIP(), connection->getPort(), &finSegment,
-                     sizeof(finSegment));
-    commandLine('i', "[Close] Sent FIN to close connection\n");
-  } else if (segment->flags.fin == 0 && segment->flags.ack == 1) {
-    commandLine('+', "[Close] Received ACK for FIN. Connection closed.\n");
-    connection->close();
-  }
-}
-
-void Client::closeConnection() {
-  // Send FIN
-  Segment finSegment = fin();
-  commandLine('i', "[Close] Sending FIN to " + connection->getIP() + ":" +
-                       std::to_string(connection->getPort()) + "\n");
-  connection->send(connection->getIP(), connection->getPort(), &finSegment,
-                   sizeof(finSegment));
-
-  // Wait for ACK and FIN
-  void *buffer = malloc(sizeof(Segment));
-  connection->ambil(buffer, sizeof(Segment));
-  handleMessage(buffer);
-  free(buffer);
+  return ConnectionResult(-1, 0, 0, 0, 0);
 }
 
 void Client::startHandshake() {
@@ -99,29 +71,4 @@ void Client::startHandshake() {
     }
   }
   commandLine('e', "[Handshake] Failed after 10 retries\n");
-}
-
-// private:
-//   std::string serverIp_;
-//   int serverPort_;
-// };
-
-void Client::run(){
-  cout<<"HEHE"<<endl;
-}
-
-
-
-int main_client() {
-  // string testIP = "127.0.0.1";
-  // int testPort = 8081;
-  // Client client(testIP, testPort);
-
-  // client.startHandshake();
-
-  // // Simulate data exchange...
-  // // std::this_thread::sleep_for(std::chrono::seconds(2));
-
-  // client.closeConnection();
-  return 0;
 }
