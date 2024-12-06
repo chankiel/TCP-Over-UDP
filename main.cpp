@@ -1,9 +1,34 @@
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <filesystem>
 #include <cctype>
 #include <algorithm>
 #include "Node/server.hpp"
 #include "Node/client.hpp"
+
+std::string transformFilePath(const std::string &filePath)
+{
+    std::ostringstream transformedPath;
+    for (char ch : filePath)
+    {
+        if (ch == '\\')
+        {
+            transformedPath << "\\\\";
+        }
+        else
+        {
+            transformedPath << ch;
+        }
+    }
+    return transformedPath.str();
+}
+
+bool fileExists(const std::string &filePath)
+{
+    std::ifstream file(filePath);
+    return file.good();
+}
 
 int main(int argc, char *argv[])
 {
@@ -70,8 +95,46 @@ int main(int argc, char *argv[])
         {
             commandLine('?', "File mode chosen, please enter the file path: ");
             std::string filePath;
-            std::cin >> filePath;
-            commandLine('+', "File has been successfully read.\n");
+            std::cin.ignore();
+            std::getline(std::cin, filePath);
+
+            std::string transformedFilePath = transformFilePath(filePath);
+
+            // std::cout << "Transformed file path: " << transformedFilePath << std::endl;
+
+            // if (fileExists(filePath))
+            // {
+            //     commandLine('+', "File has been successfully read.\n");
+            // }
+            // else
+            // {
+            //     commandLine('-', "Error: File does not exist at the specified path.\n");
+            //     return 1;
+            // }
+
+            // std::string filePath2 = "D:\\Personal Doc\\College\\Actual College\\Prak\\Prak 0 SBD\\P00_G00_13522043.docx";
+
+            if (std::filesystem::exists(transformedFilePath))
+            {
+                commandLine('+', "File has been successfully read.\n");
+            }
+            else
+            {
+                commandLine('-', "Error: File does not exist at the specified path.\n");
+                return 1;
+            }
+
+            // std::ifstream file(filePath);
+            // if (file.is_open())
+            // {
+            //     commandLine('+', "File has been successfully read.\n");
+            //     file.close();
+            // }
+            // else
+            // {
+            //     commandLine('-', "Error: File does not exist at the specified path.\n");
+            //     return 1;
+            // }
         }
         else
         {
