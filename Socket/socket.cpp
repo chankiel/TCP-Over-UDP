@@ -2,7 +2,7 @@
 #include <chrono>
 #include <iostream>
 
-TCPSocket::TCPSocket(const string &ip, int port) : localIP(ip), localPort(port), isListening(false)
+TCPSocket::TCPSocket(const string &ip, int port) : ip(ip), port(port), isListening(false)
 {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0)
@@ -18,9 +18,20 @@ TCPSocket::~TCPSocket()
     close();
 }
 
+void TCPSocket::listen() {
+  sockaddr_in sockAddr = createSockAddr(ip, port);
+
+  if (bind(sockfd, (struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0) {
+    throw std::runtime_error("Failed to bind socket");
+  }
+
+  std::cout << "Socket bound and ready to receive data on port " << port
+            << std::endl;
+}
+
 void TCPSocket::bindSocket()
 {
-    struct sockaddr_in sockAddr = createSockAddr(localIP, localPort);
+    struct sockaddr_in sockAddr = createSockAddr(ip, port);
     if (bind(sockfd, (const struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0)
     {
         exit(EXIT_FAILURE);

@@ -57,8 +57,8 @@ const std::map<TCPState, std::string> TCPStateDescriptions = {
 class TCPSocket
 {
 private:
-    string localIP;
-    int32_t localPort;
+    string ip;
+    int32_t port;
     int32_t sockfd;
     vector<Message> packetBuffer;
     mutex bufferMutex;
@@ -74,6 +74,7 @@ public:
     explicit TCPSocket(const string &ip, int port);
     ~TCPSocket();
     void TCPSocket::bindSocket();
+    void TCPSocket::listen();
 
     void startListening();
     void stopListening();
@@ -85,8 +86,8 @@ public:
 
     void produceBuffer();
     Message consumeBuffer(const string &filterIP = "", uint16_t filterPort = 0,
-                           uint32_t filterSeqNum = 0, uint32_t filterAckNum = 0,
-                           uint8_t filterFlags = 0, int timeout = -1);
+                          uint32_t filterSeqNum = 0, uint32_t filterAckNum = 0,
+                          uint8_t filterFlags = 0, int timeout = -1);
 
     void setSocketState(TCPState newState);
     TCPState getSocketState() const;
