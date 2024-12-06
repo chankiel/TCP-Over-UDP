@@ -23,23 +23,23 @@ int main(int argc, char* argv[]) {
         if (isNumber(argv[2])) {
             port = std::stoi(argv[2]);
         } else {
-            std::cerr << "Invalid port provided. Using default port: 8080\n";
+            std::cerr << "Invalid port provided. Using default port: 8080";
         }
     }
 
-    commandLine('i', "Node started at " + ip +":"+std::to_string(port)+"\n");
-    commandLine('?', "Please chose the operating mode\n");
-    commandLine('?', "1. Sender (Server)\n");
-    commandLine('?', "2. Receiver (Client)\n");
+    commandLine('i', "Node started at " + ip +":"+std::to_string(port));
+    commandLine('?', "Please chose the operating mode");
+    commandLine('?', "1. Sender (Server)");
+    commandLine('?', "2. Receiver (Client)");
     commandLine('?', "Input: ");
     int operating_mode_choice;
     std::cin>>operating_mode_choice;
     if(operating_mode_choice == 1) {
-        commandLine('+', "Node is now a sender\n");
+        commandLine('+', "Node is now a sender");
         Server server(ip,port);
         server.run();
     } else if(operating_mode_choice == 2) {
-        commandLine('+', "Node is now a receiver\n");
+        commandLine('+', "Node is now a receiver");
         Client client(ip, port);
         client.run();
     } else {
