@@ -34,8 +34,6 @@ public:
     void ackWindow(uint8_t size);
     uint32_t getCurrentSeqNum();
     uint32_t getCurrentAckNum();
-
-    void addStatusSegment(uint8_t handshakeType, uint32_t seqNum, uint32_t ackNum);
 };
 
 #endif
