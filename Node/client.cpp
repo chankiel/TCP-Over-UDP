@@ -1,12 +1,13 @@
 #include "client.hpp"
-#include <stdexcept>
-#include <string>
 #include "../Socket/socket.hpp"
 #include "../tools/tools.hpp"
 #include <cstdlib> // For malloc and free
 #include <random>
-int CLIENT_BROADCAST_TIMEOUT = 3; // temporary
-int CLIENT_MAX_TRY = 5;
+#include <stdexcept>
+#include <string>
+int CLIENT_BROADCAST_TIMEOUT = 30; // temporary
+int CLIENT_COMMON_TIMEOUT = 24;    // temporary
+int CLIENT_MAX_TRY = 10;
 
 ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port)
 {
@@ -33,6 +34,43 @@ ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port)
   return ConnectionResult(false, 0, 0, 0, 0);
 }
 
+ConnectionResult Client::startFin(string dest_ip, uint16_t dest_port,
+                                  uint32_t seqNum) {
+  for (int i = 0; i < CLIENT_MAX_TRY; i++) {
+    try {
+      // Send FIN
+      Segment finSeg = fin();
+      connection->sendSegment(finSeg, dest_ip, dest_port);
+      commandLine('i', "[Closing] Sending FIN request to " + dest_ip +
+                           to_string(dest_port) + "\n");
+      // REC ACK
+      Message answer_fin = connection->consumeBuffer(
+          dest_ip, dest_port, 0, seqNum + 1, ACK_FLAG, CLIENT_COMMON_TIMEOUT);
+      commandLine('+', "[Closing] Received ACK request from  " + dest_ip +
+                           to_string(dest_port) + "\n");
+
+      // REC FIN
+      Message fin2 = connection->consumeBuffer(dest_ip, dest_port, 0, 0,
+                                               FIN_FLAG, CLIENT_COMMON_TIMEOUT);
+      commandLine('+', "[Closing] Received FIN request from  " + dest_ip +
+                           to_string(dest_port) + "\n");
+
+      // Send ACK
+      Segment ackSeg = ack(seqNum, fin2.segment.seqNum + 1);
+      ackSeg.seqNum += sizeof(ackSeg);
+      commandLine('i', "[Closing] Sending ACK request to " + dest_ip +
+                           to_string(dest_port) + "\n");
+
+      commandLine('i', "Connection Closed\n");
+      return ConnectionResult(true, dest_ip, dest_port,0,0);
+    } catch (const std::runtime_error &e)
+    {
+      commandLine('x', "Timeout " + std::to_string(i + 1) + "\n");
+    }
+  }
+  return ConnectionResult(false, dest_ip, dest_port,0,0);
+}
+
 ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
 {
   uint32_t r_seq_num = generateRandomNumber(10, 4294967295);
@@ -41,10 +79,8 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
 
   Segment synSegment = syn(r_seq_num);
 
-  for (int i = 0; i < 10; i++)
-  {
-    try
-    {
+  for (int i = 0; i < 10; i++) {
+    try {
       // Send syn?
       connection->sendSegment(synSegment, dest_ip, dest_port);
       connection->setSocketState(TCPState::SYN_SENT);
@@ -84,7 +120,7 @@ void Client::run()
   connection->startListening();
   // Segment ackSegment = ack(0, 0);
   // connection->sendSegment(ackSegment, "127.0.0.1", 8081);
-  ConnectionResult statusBroadcast = findBroadcast("127.0.0.1", 8081);
+  ConnectionResult statusBroadcast = findBroadcast("255.255.255.255", 8081);
   if (statusBroadcast.success)
   {
     std::cout << "SUCCESS" << std::endl;
