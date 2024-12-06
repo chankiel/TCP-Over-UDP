@@ -11,17 +11,13 @@ EXEC = main
 # Default target to build the project
 all: $(EXEC)
 
-# Rule to compile the source files into object files
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+# Link object files to create the final executable
+$(TARGET): $(SRC)
+	$(CXX) $(SRC) -o $(TARGET) $(CXXFLAGS) $(INCLUDES)
 
-# Rule to link the object files into the final executable
-$(EXEC): $(OBJECTS)
-	$(CXX) $(CXXFLAGS) -o $(EXEC) $(OBJECTS)
-
-# Rule to clean up generated files
+# Clean up object files and binary
 clean:
-	rm -f $(OBJECTS) $(EXEC)
+	rm -f $(TARGET)
 
 # Rule to clean and rebuild everything
 rebuild: clean all

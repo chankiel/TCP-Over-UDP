@@ -5,8 +5,8 @@
 #include <cstring>
 
 struct Segment {
-  uint16_t sourcePort : 16;
   uint16_t destPort : 16;
+  uint16_t sourcePort : 16;
   uint32_t seqNum : 32;
   uint32_t ackNum : 32;
   // todo continue

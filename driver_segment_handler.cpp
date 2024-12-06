@@ -2,7 +2,7 @@
 #include <iostream>
 using namespace std;
 
-int main()
+int main_driver()
 {
     uint8_t data[] = "Hello, this is a test data stream for TCP segment handling.";
     uint32_t dataSize = sizeof(data) - 1; // Exclude null terminator

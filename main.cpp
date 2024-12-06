@@ -41,17 +41,17 @@ int main(int argc, char* argv[]) {
 
     commandLine('i', "Node started at " + ip +":"+std::to_string(port)+"\n");
     commandLine('?', "Please chose the operating mode\n");
-    commandLine('?', "1. Sender\n");
-    commandLine('?', "2. Receiver\n");
+    commandLine('?', "1. Sender (Server)\n");
+    commandLine('?', "2. Receiver (Client)\n");
     commandLine('?', "Input: ");
     int operating_mode_choice;
     std::cin>>operating_mode_choice;
     if(operating_mode_choice == 1) {
-        std::cout<<"Hehe";
-        Server server(port);
+        commandLine('+', "Node is now a sender\n");
+        Server server(ip,port);
         server.startServer();
     } else if(operating_mode_choice == 2) {
-        std::cout<<"Hehe";
+        commandLine('+', "Node is now a receiver\n");
         Client client(ip, port);
         client.startHandshake();
     } else {
