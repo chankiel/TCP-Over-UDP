@@ -1,4 +1,5 @@
 #include "segment.hpp"
+#include <cstdint>
 #include <string>  // Required for std::string
 #include <utility> // Required for std::pair
 #include <vector>
@@ -101,6 +102,8 @@ Segment finAck(uint32_t seqNum, uint32_t ackNum) {
  * Calculate the checksum for a given Segment
  */
 uint16_t calculateChecksum(Segment &segment) {
+  // std::cout << "calc: " << std::endl;
+  // printSegment(segment);
   segment.checksum = 0;
 
   const size_t segmentSize = sizeof(Segment);
@@ -116,7 +119,7 @@ uint16_t calculateChecksum(Segment &segment) {
     memcpy(buffer + segmentSize, segment.payload, payloadSize);
   }
 
-  uint32_t sum = 0;
+  uint16_t sum = 0;
   for (size_t i = 0; i < totalSize; i += 2) {
     uint16_t word = (buffer[i] << 8);
     if (i + 1 < totalSize) {
@@ -137,10 +140,14 @@ uint16_t calculateChecksum(Segment &segment) {
 /**
  * Update a Segment with the calculated checksum
  */
-Segment updateChecksum(Segment segment) {
-  auto checksum = calculateChecksum(segment);
+// Segment updateChecksum(Segment &segment) {
+void updateChecksum(Segment &segment) {
+  // std::cout << "up: " << std::endl;
+  // printSegment(segment);
+
+  uint16_t checksum = calculateChecksum(segment);
   segment.checksum = checksum;
-  return segment;
+  // return segment;
 }
 
 /**

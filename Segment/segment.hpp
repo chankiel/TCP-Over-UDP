@@ -101,12 +101,12 @@ Segment synAck(uint32_t seqNum, uint32_t ackNum);
 /**
  * Generate Segment that contain FIN packet
  */
-Segment fin(uint32_t seqNum,uint32_t ackNum);
+Segment fin(uint32_t seqNum, uint32_t ackNum);
 
 /**
  * Generate Segment that contain FIN-ACK packet
  */
-Segment finAck(uint32_t seqNum,uint32_t ackNum);
+Segment finAck(uint32_t seqNum, uint32_t ackNum);
 
 // update return type as needed
 uint16_t calculateChecksum(Segment &segment);
@@ -114,7 +114,8 @@ uint16_t calculateChecksum(Segment &segment);
 /**
  * Return a new segment with a calcuated checksum fields
  */
-Segment updateChecksum(Segment segment);
+void updateChecksum(Segment &segment);
+// Segment updateChecksum(Segment segment);
 
 /**
  * Check if a TCP Segment has a valid checksum

@@ -2,6 +2,7 @@
 #include "../Socket/socket.hpp"
 #include "../tools/tools.hpp"
 #include <cstdlib> // For malloc and free
+#include <pthread.h>
 #include <random>
 #include <stdexcept>
 #include <string>
@@ -17,7 +18,21 @@ ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port) {
     try {
       // Segment temp = createSegment("AWD",port,dest_port);
       Segment temp = broad();
-      temp = updateChecksum(temp);
+      updateChecksum(temp);
+      std::cout << "client checksum update 1: " << temp.checksum << std::endl;
+      updateChecksum(temp);
+      std::cout << "client checksum update 2: " << temp.checksum << std::endl;
+      printSegment(temp);
+      // temp.checksum = calculateChecksum(temp);
+
+      // std::cout << "client checksum calc 1: " << calculateChecksum(temp)
+      //           << std::endl;
+      // std::cout << "client checksum calc 2: " << calculateChecksum(temp)
+      //           << std::endl;
+
+      // temp = updateChecksum(temp); std::cout << "client checksum
+      // update 2: " << temp.checksum << std::endl; printSegment(temp);
+
       std::cout << "find broadcast checksum " << temp.checksum << std::endl;
       connection->sendSegment(temp, dest_ip, dest_port);
       commandLine('i', "Sending Broadcast");
@@ -126,7 +141,9 @@ ConnectionResult Client::startFin(string dest_ip, uint16_t dest_port,
                            to_string(dest_port));
       // Send ACK
       Segment ackSeg = ack(seqNum + 1, rec_fin.segment.seqNum + 1);
-      ackSeg = updateChecksum(ackSeg);
+      updateChecksum(ackSeg);
+      // ackSeg.checksum = calculateChecksum(ackSeg);
+
       connection->sendSegment(ackSeg, dest_ip, dest_port);
       commandLine('i', "[Closing] [S=" + to_string(ackSeg.seqNum) +
                            "] [A=" + to_string(ackSeg.ackNum) +
@@ -135,7 +152,8 @@ ConnectionResult Client::startFin(string dest_ip, uint16_t dest_port,
 
       // Send FIN
       Segment finSeg = fin(seqNum + 2, rec_fin.segment.seqNum + 1);
-      finSeg = updateChecksum(finSeg);
+      updateChecksum(finSeg);
+      // finSeg.checksum = calculateChecksum(finSeg);
       connection->sendSegment(finSeg, dest_ip, dest_port);
       commandLine('i', "[Closing] [S=" + to_string(finSeg.seqNum) +
                            "] [A=" + to_string(finSeg.ackNum) +
@@ -171,7 +189,8 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port) {
   commandLine('i', "Sender Program's Three Way Handshake");
 
   Segment synSegment = syn(r_seq_num);
-  synSegment = updateChecksum(synSegment);
+  updateChecksum(synSegment);
+  // synSegment.checksum = calculateChecksum(synSegment);
 
   for (int i = 0; i < 10; i++) {
     try {
@@ -187,7 +206,9 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port) {
       Message result = connection->consumeBuffer(
           dest_ip, dest_port, 0, r_seq_num + 1, SYN_ACK_FLAG, 10);
       Segment synAckSegment = result.segment;
-      synAckSegment = updateChecksum(synAckSegment);
+      updateChecksum(synAckSegment);
+      // synAckSegment.checksum = calculateChecksum(synAckSegment);
+
       // std::cout << synAckSegment.seqNum << " " << spynAckSegment.ackNum <<
       // std::endl;
       connection->setStatus(TCPStatusEnum::ESTABLISHED);
@@ -202,7 +223,8 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port) {
       // Send ack?
       uint32_t ackNum = synAckSegment.seqNum + 1;
       Segment ackSegment = ack(r_seq_num + 1, ackNum);
-      ackSegment = updateChecksum(ackSegment);
+      updateChecksum(ackSegment);
+      // ackSegment.checksum = calculateChecksum(ackSegment);
       connection->sendSegment(ackSegment, dest_ip, dest_port);
       commandLine('i', "[Established] [Seg 2] [A=" + std::to_string(ackNum) +
                            "] Sending ACK request to " + dest_ip + ":" +

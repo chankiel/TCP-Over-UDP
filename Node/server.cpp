@@ -32,8 +32,8 @@ ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port) {
                            "] Sending SYN-ACK request to " + dest_ip + ":" +
                            std::to_string(destPort));
       Segment synSeg = synAck(sequence_num_second, ack_num_second);
-      // std::cout << synSeg.seqNum << " " << synSeg.ackNum << std::endl;
-      synSeg = updateChecksum(synSeg);
+      updateChecksum(synSeg);
+      // synSeg.checksum = calculateChecksum(synSeg);
       connection->sendSegment(synSeg, dest_ip, dest_port);
       connection->setStatus(TCPStatusEnum::SYN_SENT);
 
@@ -71,7 +71,8 @@ ConnectionResult Server::listenBroadcast() {
           connection->consumeBuffer("", 0, 0, 0, 0, SERVER_BROADCAST_TIMEOUT);
       commandLine('+', "Received Broadcast Message");
       Segment temp = accBroad();
-      temp = updateChecksum(temp);
+      updateChecksum(temp);
+      // temp.checksum = calculateChecksum(temp);
       connection->sendSegment(temp, answer.ip, answer.port);
       return ConnectionResult(true, answer.ip, answer.port,
                               answer.segment.seqNum, answer.segment.ackNum);
@@ -161,7 +162,8 @@ ConnectionResult Server::respondFin(string dest_ip, uint16_t dest_port,
       // std::cout << "seq: " << seqNum << std::endl;
       // std::cout << "ack: " << ackNum << std::endl;
       Segment finSeg = fin(seqNum + 1, ackNum);
-      finSeg = updateChecksum(finSeg);
+      updateChecksum(finSeg);
+      // finSeg.checksum = calculateChecksum(finSeg);
       connection->sendSegment(finSeg, dest_ip, dest_port);
       commandLine('i', "[Closing] [S=" + to_string(finSeg.seqNum) +
                            "] [A=" + to_string(finSeg.ackNum) +
@@ -187,7 +189,8 @@ ConnectionResult Server::respondFin(string dest_ip, uint16_t dest_port,
 
       // Send ACK
       Segment ackSeg = ack(seqNum + 2, fin2.segment.seqNum + 1);
-      ackSeg = updateChecksum(ackSeg);
+      updateChecksum(ackSeg);
+      // ackSeg.checksum = calculateChecksum(ackSeg);
       // ackSeg.seqNum += sizeof(ackSeg);
       // std::cout << ackSeg.seqNum << std::endl;
       connection->sendSegment(ackSeg, dest_ip, dest_port);
