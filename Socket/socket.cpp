@@ -1,6 +1,7 @@
 #include "socket.hpp"
 #include <chrono>
 #include <iostream>
+#include <iterator>
 #include <sys/types.h>
 
 TCPSocket::TCPSocket(const string &ip, int port)
@@ -124,13 +125,15 @@ void TCPSocket::produceBuffer()
                 continue;
             }
 
-            Segment segment = decodeSegment(dataBuffer, bytesRead);
-            delete[] dataBuffer;
-
-            // if (!isValidChecksum(segment))
-            // {
-            //     continue;
-            // }
+      Segment segment = decodeSegment(dataBuffer, bytesRead);
+      delete[] dataBuffer;
+      // std::cout << "procedurBuffer debug" << std::endl;
+      // std::cout << "procedurBuffer checksum: " << segment.checksum <<
+      // std::endl; if (!isValidChecksum(segment)) { // error pas masuk isvalid
+      // checksum
+      if (segment.checksum == calculateChecksum(segment)) {
+        continue;
+      }
 
             Message message(inet_ntoa(clientAddress.sin_addr),
                             ntohs(clientAddress.sin_port), segment);
