@@ -1,6 +1,7 @@
 #include "socket.hpp"
 #include <chrono>
 #include <iostream>
+#include <iterator>
 #include <sys/types.h>
 
 TCPSocket::TCPSocket(const string &ip, int port)
@@ -105,11 +106,13 @@ void TCPSocket::produceBuffer() {
 
       Segment segment = decodeSegment(dataBuffer, bytesRead);
       delete[] dataBuffer;
-
-      // if (!isValidChecksum(segment))
-      // {
-      //     continue;
-      // }
+      // std::cout << "procedurBuffer debug" << std::endl;
+      // std::cout << "procedurBuffer checksum: " << segment.checksum <<
+      // std::endl; if (!isValidChecksum(segment)) { // error pas masuk isvalid
+      // checksum
+      if (segment.checksum == calculateChecksum(segment)) {
+        continue;
+      }
 
       Message message(inet_ntoa(clientAddress.sin_addr),
                       ntohs(clientAddress.sin_port), segment);
@@ -128,31 +131,30 @@ void TCPSocket::produceBuffer() {
 }
 
 Message TCPSocket::consumeBuffer(const string &filterIP, uint16_t filterPort,
-                                  uint32_t filterSeqNum, uint32_t filterAckNum,
-                                  uint8_t filterFlags, int timeout)
-{
-    auto start = std::chrono::steady_clock::now();
-    auto timeoutPoint = (timeout > 0) ? start + std::chrono::seconds(timeout) : std::chrono::steady_clock::time_point::max();
-    while (isListening)
-    {
-        // std::cout << packetBuffer.size() << std::endl;
-        std::unique_lock<mutex> lock(bufferMutex);
-        bufferCondition.wait_for(lock, std::chrono::milliseconds(100), [this]() { return !packetBuffer.empty(); });
-        for (auto it = packetBuffer.begin(); it != packetBuffer.end(); ++it)
-        {
-            const auto &msg = *it;
-            if ((filterIP.empty() || msg.ip == filterIP) &&
-                (filterPort == 0 || msg.port == filterPort) &&
-                (filterSeqNum == 0 || msg.segment.seqNum == filterSeqNum) &&
-                (filterAckNum == 0 || msg.segment.ackNum == filterAckNum) &&
-                (filterFlags == 0 || getFlags8(&msg.segment) == filterFlags))
-            {
-                Message result = std::move(*it);
-                packetBuffer.erase(it);
-                return result;
-            }
-        }
-        // std::cout<<timeout<<std::endl;
+                                 uint32_t filterSeqNum, uint32_t filterAckNum,
+                                 uint8_t filterFlags, int timeout) {
+  auto start = std::chrono::steady_clock::now();
+  auto timeoutPoint = (timeout > 0)
+                          ? start + std::chrono::seconds(timeout)
+                          : std::chrono::steady_clock::time_point::max();
+  while (isListening) {
+    // std::cout << packetBuffer.size() << std::endl;
+    std::unique_lock<mutex> lock(bufferMutex);
+    bufferCondition.wait_for(lock, std::chrono::milliseconds(100),
+                             [this]() { return !packetBuffer.empty(); });
+    for (auto it = packetBuffer.begin(); it != packetBuffer.end(); ++it) {
+      const auto &msg = *it;
+      if ((filterIP.empty() || msg.ip == filterIP) &&
+          (filterPort == 0 || msg.port == filterPort) &&
+          (filterSeqNum == 0 || msg.segment.seqNum == filterSeqNum) &&
+          (filterAckNum == 0 || msg.segment.ackNum == filterAckNum) &&
+          (filterFlags == 0 || getFlags8(&msg.segment) == filterFlags)) {
+        Message result = std::move(*it);
+        packetBuffer.erase(it);
+        return result;
+      }
+    }
+    // std::cout<<timeout<<std::endl;
 
     if (timeout > 0 && std::chrono::steady_clock::now() > timeoutPoint) {
       throw std::runtime_error("Buffer consumer timeout.");

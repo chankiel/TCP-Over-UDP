@@ -62,7 +62,7 @@ Segment ack(uint32_t seqNum, uint32_t ackNum) {
 /**
  * Generate a Segment containing a SYN-ACK packet
  */
-Segment synAck(uint32_t seqNum,uint32_t ackNum) {
+Segment synAck(uint32_t seqNum, uint32_t ackNum) {
   Segment segment;
   segment.seqNum = seqNum;
   segment.ackNum = ackNum;
@@ -75,7 +75,7 @@ Segment synAck(uint32_t seqNum,uint32_t ackNum) {
 /**
  * Generate a Segment containing a FIN packet
  */
-Segment fin(uint32_t seqNum,uint32_t ackNum) {
+Segment fin(uint32_t seqNum, uint32_t ackNum) {
   Segment segment;
   segment.seqNum = seqNum;
   segment.ackNum = ackNum;
@@ -87,7 +87,7 @@ Segment fin(uint32_t seqNum,uint32_t ackNum) {
 /**
  * Generate a Segment containing a FIN-ACK packet
  */
-Segment finAck(uint32_t seqNum,uint32_t ackNum) {
+Segment finAck(uint32_t seqNum, uint32_t ackNum) {
   Segment segment;
   segment.seqNum = seqNum;
   segment.ackNum = ackNum;
@@ -147,9 +147,14 @@ Segment updateChecksum(Segment segment) {
  * Verify if a Segment has a valid checksum
  */
 bool isValidChecksum(Segment segment) {
-  auto checksum = calculateChecksum(segment);
-  uint16_t computed = checksum;
-  return computed == segment.checksum;
+  uint16_t curChecksum = segment.checksum;
+  uint16_t computed = calculateChecksum(segment);
+
+  std::cout << "isValidChecksum debug" << std::endl;
+  std::cout << "computed: " << computed << std::endl;
+  std::cout << "inside: " << curChecksum << std::endl;
+  return computed == curChecksum;
+  // return calculateChecksum(segment) == segment.checksum;
 }
 
 Segment createSegment(const std::string &data, uint16_t sport, uint16_t dport) {

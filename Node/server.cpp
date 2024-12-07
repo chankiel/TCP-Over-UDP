@@ -33,6 +33,7 @@ ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port) {
                            std::to_string(destPort));
       Segment synSeg = synAck(sequence_num_second, ack_num_second);
       // std::cout << synSeg.seqNum << " " << synSeg.ackNum << std::endl;
+      synSeg = updateChecksum(synSeg);
       connection->sendSegment(synSeg, dest_ip, dest_port);
       connection->setSocketState(TCPState::SYN_SENT);
 
@@ -68,13 +69,14 @@ ConnectionResult Server::listenBroadcast() {
     try {
       Message answer =
           connection->consumeBuffer("", 0, 0, 0, 0, SERVER_BROADCAST_TIMEOUT);
-      commandLine('+', "Received Broadcast Message\n");
+      commandLine('+', "Received Broadcast Message");
       Segment temp = accBroad();
+      temp = updateChecksum(temp);
       connection->sendSegment(temp, answer.ip, answer.port);
       return ConnectionResult(true, answer.ip, answer.port,
                               answer.segment.seqNum, answer.segment.ackNum);
     } catch (const std::runtime_error &e) {
-      commandLine('x', "Timeout " + std::to_string(i + 1) + "\n");
+      commandLine('x', "Timeout " + std::to_string(i + 1));
       continue;
     }
   }
@@ -159,11 +161,12 @@ ConnectionResult Server::respondFin(string dest_ip, uint16_t dest_port,
       // std::cout << "seq: " << seqNum << std::endl;
       // std::cout << "ack: " << ackNum << std::endl;
       Segment finSeg = fin(seqNum + 1, ackNum);
+      finSeg = updateChecksum(finSeg);
       connection->sendSegment(finSeg, dest_ip, dest_port);
       commandLine('i', "[Closing] [S=" + to_string(finSeg.seqNum) +
                            "] [A=" + to_string(finSeg.ackNum) +
                            "] Sending FIN request to " + dest_ip + ":" +
-                           to_string(dest_port) + "\n");
+                           to_string(dest_port));
       // REC ACK
       Message answer_fin =
           connection->consumeBuffer(dest_ip, dest_port, 0, finSeg.seqNum + 1,
@@ -171,7 +174,7 @@ ConnectionResult Server::respondFin(string dest_ip, uint16_t dest_port,
       commandLine('+', "[Closing] [S=" + to_string(answer_fin.segment.seqNum) +
                            "] [A=" + to_string(answer_fin.segment.ackNum) +
                            "] Received ACK request from  " + dest_ip +
-                           to_string(dest_port) + "\n");
+                           to_string(dest_port));
 
       // REC FIN
       Message fin2 =
@@ -180,23 +183,24 @@ ConnectionResult Server::respondFin(string dest_ip, uint16_t dest_port,
       commandLine('+', "[Closing] [S=" + to_string(fin2.segment.seqNum) +
                            "] [A=" + to_string(fin2.segment.ackNum) +
                            "] Received FIN request from  " + dest_ip +
-                           to_string(dest_port) + "\n");
+                           to_string(dest_port));
 
       // Send ACK
       Segment ackSeg = ack(seqNum + 2, fin2.segment.seqNum + 1);
+      ackSeg = updateChecksum(ackSeg);
       // ackSeg.seqNum += sizeof(ackSeg);
-      std::cout << ackSeg.seqNum << std::endl;
+      // std::cout << ackSeg.seqNum << std::endl;
       connection->sendSegment(ackSeg, dest_ip, dest_port);
 
       commandLine('i', "[Closing] [S=" + to_string(ackSeg.seqNum) +
                            "] [A=" + to_string(ackSeg.ackNum) +
                            "] Sending FIN request to " + dest_ip + ":" +
-                           to_string(dest_port) + "\n");
+                           to_string(dest_port));
 
-      commandLine('i', "Connection Closed\n");
+      commandLine('i', "Connection Closed");
       return ConnectionResult(true, dest_ip, dest_port, 0, 0);
     } catch (const std::runtime_error &e) {
-      commandLine('x', "Timeout " + std::to_string(i + 1) + "\n");
+      commandLine('x', "Timeout " + std::to_string(i + 1));
       continue;
     }
   }
