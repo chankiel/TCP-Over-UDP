@@ -70,14 +70,21 @@ bool TCPSocket::send(const string &destinationIP, int32_t destinationPort,
 
 void TCPSocket::sendSegment(const Segment &segment, const string &destinationIP,
                             uint16_t destinationPort) {
-  auto updatedSegment = updateChecksum(segment);
-  uint32_t segmentSize = updatedSegment.payloadSize + 24;
+  // auto updatedSegment = updateChecksum(segment);
+  // uint32_t segmentSize = updatedSegment.payloadSize + 24;
 
+  // auto *buffer = new uint8_t[segmentSize];
+  // encodeSegment(updatedSegment, buffer);
+  // send(destinationIP, destinationPort, buffer, segmentSize);
+  // std::cout << "procedurBuffer checksum calc: " << calculateChecksum(segment)
+  //           << std::endl;
+
+  uint32_t segmentSize = segment.payloadSize + 24;
   auto *buffer = new uint8_t[segmentSize];
-  encodeSegment(updatedSegment, buffer);
+  encodeSegment(segment, buffer);
+  // std::cout << "procedurBuffer checksum inside: " << segment.checksum
+  //           << std::endl;
   send(destinationIP, destinationPort, buffer, segmentSize);
-  // cout << "SEND SEGMENT: " << destinationIP << " " << destinationPort << " "
-  // << segment.payloadSize << endl;
   delete[] buffer;
 }
 
@@ -109,12 +116,12 @@ void TCPSocket::produceBuffer() {
 
       Segment segment = decodeSegment(dataBuffer, bytesRead);
       delete[] dataBuffer;
-      std::cout << "procedurBuffer debug" << std::endl;
-      printSegment(segment);
-      std::cout << "procedurBuffer checksum inside: " << segment.checksum
-                << std::endl;
-      std::cout << "procedurBuffer checksum calc: "
-                << calculateChecksum(segment) << std::endl;
+      // std::cout << "procedurBuffer debug" << std::endl;
+      // // printSegment(segment);
+      // std::cout << "procedurBuffer checksum inside: " << segment.checksum
+      //           << std::endl;
+      // std::cout << "procedurBuffer checksum calc: "
+      //           << calculateChecksum(segment) << std::endl;
       // if (!isValidChecksum(segment)) { // error pas masuk isvalid
       // checksum
       if (segment.checksum != calculateChecksum(segment)) {

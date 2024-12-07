@@ -19,11 +19,13 @@ ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port) {
       // Segment temp = createSegment("AWD",port,dest_port);
       Segment temp = broad();
       updateChecksum(temp);
-      std::cout << "client checksum update 1: " << temp.checksum << std::endl;
-      updateChecksum(temp);
-      std::cout << "client checksum update 2: " << temp.checksum << std::endl;
-      printSegment(temp);
-      // temp.checksum = calculateChecksum(temp);
+
+      // auto *buffer = new uint8_t[temp.payloadSize + 24];
+      // encodeSegment(temp, buffer);
+      // std::cout << "client checksum update 1: " << temp.checksum <<
+      // std::endl; updateChecksum(temp); std::cout << "client checksum update
+      // 2: " << temp.checksum << std::endl; printSegment(temp); temp.checksum =
+      // calculateChecksum(temp);
 
       // std::cout << "client checksum calc 1: " << calculateChecksum(temp)
       //           << std::endl;
@@ -198,36 +200,43 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port) {
       connection->sendSegment(synSegment, dest_ip, dest_port);
       connection->setStatus(TCPStatusEnum::SYN_SENT);
 
-      commandLine('i', "[Established] [Seg 1] [S=" + std::to_string(r_seq_num) +
+      commandLine('i', "[Handshake] [S=" + std::to_string(r_seq_num) +
                            "] Sending SYN request to " + dest_ip + ":" +
                            std::to_string(dest_port));
 
       // Wait syn-ack?
       Message result = connection->consumeBuffer(
           dest_ip, dest_port, 0, r_seq_num + 1, SYN_ACK_FLAG, 10);
-      Segment synAckSegment = result.segment;
-      updateChecksum(synAckSegment);
+      commandLine('i',
+                  "[Handshake] [S=" + std::to_string(result.segment.seqNum) +
+                      "] [A=" + std::to_string(result.segment.ackNum) +
+                      "] Received SYN-ACK request to " + dest_ip + ":" +
+                      std::to_string(dest_port));
+
+      // Segment synAckSegment = result.segment;
+      // updateChecksum(synAckSegment);
       // synAckSegment.checksum = calculateChecksum(synAckSegment);
 
       // std::cout << synAckSegment.seqNum << " " << spynAckSegment.ackNum <<
       // std::endl;
-      connection->setStatus(TCPStatusEnum::ESTABLISHED);
+      // connection->setStatus(TCPStatusEnum::ESTABLISHED);
 
-      commandLine('~', "[Established] Waiting for segments to be ACKed");
-      commandLine('i', "[Established] [Seg 1] [S=" +
-                           std::to_string(synAckSegment.seqNum) +
-                           "] [A=" + std::to_string(synAckSegment.ackNum) +
-                           "] Received SYN-ACK request from " + result.ip +
-                           ":" + std::to_string(result.port));
+      // commandLine('~', "[Handshake] Waiting for segments to be ACKed");
+      // commandLine('i', "[Established] [Seg 1] [S=" +
+      //                      std::to_string(synAckSegment.seqNum) +
+      //                      "] [A=" + std::to_string(synAckSegment.ackNum) +
+      //                      "] Received SYN-ACK request from " + result.ip +
+      //                      ":" + std::to_string(result.port));
 
       // Send ack?
-      uint32_t ackNum = synAckSegment.seqNum + 1;
+      uint32_t ackNum = result.segment.seqNum + 1;
       Segment ackSegment = ack(r_seq_num + 1, ackNum);
       updateChecksum(ackSegment);
       // ackSegment.checksum = calculateChecksum(ackSegment);
       connection->sendSegment(ackSegment, dest_ip, dest_port);
-      commandLine('i', "[Established] [Seg 2] [A=" + std::to_string(ackNum) +
-                           "] Sending ACK request to " + dest_ip + ":" +
+      commandLine('i', "[Handshake] [S=" + std::to_string(ackSegment.seqNum) +
+                           "] [A=" + std::to_string(ackSegment.ackNum) +
+                           "] Sending SYN-ACK request to " + dest_ip + ":" +
                            std::to_string(dest_port));
       commandLine('~', "Ready to receive input from " + dest_ip + ":" +
                            std::to_string(dest_port));
@@ -248,10 +257,11 @@ void Client::run() {
       findBroadcast("255.255.255.255", serverPort);
   ConnectionResult statusHandshake =
       startHandshake(statusBroadcast.ip, statusBroadcast.port);
-  cout<<statusHandshake.seqNum<<" "<<statusHandshake.ackNum<<endl;
+  cout << statusHandshake.seqNum << " " << statusHandshake.ackNum << endl;
 
   vector<Segment> res;
-  connection->receiveBackN(res,statusBroadcast.ip,statusBroadcast.port,statusHandshake.seqNum+1);
+  connection->receiveBackN(res, statusBroadcast.ip, statusBroadcast.port,
+                           statusHandshake.seqNum + 1);
   // // ConnectionResult statusFin =
   // startFin(statusBroadcast.ip,statusBroadcast.port,statusHandshake.ackNum,statusHandshake.seqNum+1);
   ConnectionResult statusFin =
