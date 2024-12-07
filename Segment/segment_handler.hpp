@@ -22,17 +22,19 @@ private:
   vector<Segment> segmentBuffer; // or use std vector if you like
 
   // Ubah dataStream jadi segment2
-  void generateSegments();
+  void generateSegments(uint32_t startingSeqNum,uint16_t sourcePort,uint16_t destPort);
 
 public:
   SegmentHandler();
   ~SegmentHandler();
-  void setDataStream(uint8_t *dataStream, uint32_t dataSize);
+  void setDataStream(uint8_t *dataStream, uint32_t dataSize, uint32_t startingSeqNum, uint16_t sourcePort,uint16_t destPort);
   uint8_t getWindowSize();
   Segment *advanceWindow(uint8_t size);
-  void ackWindow(uint8_t size);
+  void ackWindow(uint32_t seqNum);
   uint32_t getCurrentSeqNum();
   uint32_t getCurrentAckNum();
+  void goBackWindow();
+
 };
 
 #endif
