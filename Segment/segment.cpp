@@ -1,4 +1,5 @@
 #include "segment.hpp"
+#include <cstdint>
 #include <string>  // Required for std::string
 #include <utility> // Required for std::pair
 #include <vector>
@@ -62,9 +63,10 @@ Segment ack(uint32_t seqNum, uint32_t ackNum) {
 /**
  * Generate a Segment containing a SYN-ACK packet
  */
-Segment synAck(uint32_t seqNum) {
+Segment synAck(uint32_t seqNum, uint32_t ackNum) {
   Segment segment;
   segment.seqNum = seqNum;
+  segment.ackNum = ackNum;
   segment.flags.syn = 1;
   segment.flags.ack = 1;
   segment.payloadSize = 0;
@@ -74,8 +76,10 @@ Segment synAck(uint32_t seqNum) {
 /**
  * Generate a Segment containing a FIN packet
  */
-Segment fin() {
+Segment fin(uint32_t seqNum, uint32_t ackNum) {
   Segment segment;
+  segment.seqNum = seqNum;
+  segment.ackNum = ackNum;
   segment.flags.fin = 1;
   segment.payloadSize = 0;
   return segment;
@@ -84,8 +88,10 @@ Segment fin() {
 /**
  * Generate a Segment containing a FIN-ACK packet
  */
-Segment finAck() {
+Segment finAck(uint32_t seqNum, uint32_t ackNum) {
   Segment segment;
+  segment.seqNum = seqNum;
+  segment.ackNum = ackNum;
   segment.flags.fin = 1;
   segment.flags.ack = 1;
   segment.payloadSize = 0;
@@ -96,55 +102,114 @@ Segment finAck() {
  * Calculate the checksum for a given Segment
  */
 uint16_t calculateChecksum(Segment &segment) {
-  segment.checksum = 0;
-
-  const size_t segmentSize = sizeof(Segment);
-  const size_t payloadSize = (segment.data_offset - 5) * 4;
-  const size_t totalSize = segmentSize + payloadSize;
-
-  uint8_t buffer[totalSize];
-  memset(buffer, 0, totalSize);
-
-  memcpy(buffer, &segment, segmentSize);
-
-  if (segment.payload != nullptr && payloadSize > 0) {
-    memcpy(buffer + segmentSize, segment.payload, payloadSize);
-  }
-
   uint32_t sum = 0;
-  for (size_t i = 0; i < totalSize; i += 2) {
-    uint16_t word = (buffer[i] << 8);
-    if (i + 1 < totalSize) {
-      word |= buffer[i + 1];
-    }
-    sum += word;
 
-    while (sum >> 16) {
-      sum = (sum & 0xFFFF) + (sum >> 16);
+  // Helper function to add 16-bit words to the sum and carry the overflow
+  auto addToSum = [&](uint16_t word) {
+    sum += word;
+    if (sum > 0xFFFF) {         // if there's an overflow
+      sum = (sum & 0xFFFF) + 1; // carry the overflow
+    }
+  };
+
+  // Add the fields from the Segment structure
+  addToSum(segment.sourcePort);
+  addToSum(segment.destPort);
+  addToSum(segment.seqNum >> 16);    // High 16 bits of seqNum
+  addToSum(segment.seqNum & 0xFFFF); // Low 16 bits of seqNum
+  addToSum(segment.ackNum >> 16);    // High 16 bits of ackNum
+  addToSum(segment.ackNum & 0xFFFF); // Low 16 bits of ackNum
+  addToSum((segment.data_offset << 12) | (segment.reserved << 8) |
+           *((uint16_t *)&segment.flags));
+
+  addToSum(segment.window);
+  addToSum(segment.urgPointer);
+
+  // Add the payload (if it exists)
+  if (segment.payload != nullptr && segment.payloadSize > 0) {
+    uint8_t *payload = segment.payload;
+    uint32_t remaining = segment.payloadSize;
+
+    // Process the payload in 16-bit chunks
+    while (remaining > 1) {
+      uint16_t word = (payload[0] << 8) + payload[1];
+      addToSum(word);
+      payload += 2;
+      remaining -= 2;
+    }
+
+    // Handle the case if there's an odd byte left
+    if (remaining > 0) {
+      uint16_t word = (payload[0] << 8);
+      addToSum(word);
     }
   }
 
-  uint16_t checksum = ~sum;
-
-  return checksum;
+  // Final 1's complement of the sum
+  sum = ~sum;
+  return static_cast<uint16_t>(sum);
 }
+// uint16_t calculateChecksum(Segment &segment) {
+//   // std::cout << "calc: " << std::endl;
+//   // printSegment(segment);
+//   segment.checksum = 0;
+
+//   const size_t segmentSize = sizeof(Segment);
+//   const size_t payloadSize = (segment.data_offset - 5) * 4;
+//   const size_t totalSize = segmentSize + payloadSize;
+
+//   uint8_t buffer[totalSize];
+//   memset(buffer, 0, totalSize);
+
+//   memcpy(buffer, &segment, segmentSize);
+
+//   if (segment.payload != nullptr && payloadSize > 0) {
+//     memcpy(buffer + segmentSize, &segment.payload, payloadSize);
+//   }
+
+//   uint16_t sum = 0;
+//   for (size_t i = 0; i < totalSize; i += 2) {
+//     uint16_t word = (buffer[i] << 8);
+//     if (i + 1 < totalSize) {
+//       word |= buffer[i + 1];
+//     }
+//     sum += word;
+
+//     while (sum >> 16) {
+//       sum = (sum & 0xFFFF) + (sum >> 16);
+//     }
+//   }
+
+//   uint16_t checksum = ~sum;
+
+//   return checksum;
+// }
 
 /**
  * Update a Segment with the calculated checksum
  */
-Segment updateChecksum(Segment segment) {
-  auto checksum = calculateChecksum(segment);
+// Segment updateChecksum(Segment &segment) {
+void updateChecksum(Segment &segment) {
+  // std::cout << "up: " << std::endl;
+  // printSegment(segment);
+
+  uint16_t checksum = calculateChecksum(segment);
   segment.checksum = checksum;
-  return segment;
+  // return segment;
 }
 
 /**
  * Verify if a Segment has a valid checksum
  */
 bool isValidChecksum(Segment segment) {
-  auto checksum = calculateChecksum(segment);
-  uint16_t computed = checksum;
-  return computed == segment.checksum;
+  uint16_t curChecksum = segment.checksum;
+  uint16_t computed = calculateChecksum(segment);
+
+  std::cout << "isValidChecksum debug" << std::endl;
+  std::cout << "computed: " << computed << std::endl;
+  std::cout << "inside: " << curChecksum << std::endl;
+  return computed == curChecksum;
+  // return calculateChecksum(segment) == segment.checksum;
 }
 
 Segment createSegment(const std::string &data, uint16_t sport, uint16_t dport) {

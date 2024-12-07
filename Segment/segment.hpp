@@ -70,7 +70,7 @@ const uint8_t FIN_ACK_FLAG = FIN_FLAG | ACK_FLAG;
 
 // Payload size di options 32 bit
 const uint32_t HEADER_SIZE = 24;
-const uint32_t MAX_PAYLOAD_SIZE = 1476;
+const uint32_t MAX_PAYLOAD_SIZE = 20;
 const uint32_t MAX_SEGMENT_SIZE = HEADER_SIZE + MAX_PAYLOAD_SIZE; // MTU: 1500
 
 /**
@@ -96,17 +96,17 @@ Segment ack(uint32_t seqNum, uint32_t ackNum);
 /**
  * Generate Segment that contain SYN-ACK packet
  */
-Segment synAck(uint32_t seqNum);
+Segment synAck(uint32_t seqNum, uint32_t ackNum);
 
 /**
  * Generate Segment that contain FIN packet
  */
-Segment fin();
+Segment fin(uint32_t seqNum, uint32_t ackNum);
 
 /**
  * Generate Segment that contain FIN-ACK packet
  */
-Segment finAck();
+Segment finAck(uint32_t seqNum, uint32_t ackNum);
 
 // update return type as needed
 uint16_t calculateChecksum(Segment &segment);
@@ -114,7 +114,8 @@ uint16_t calculateChecksum(Segment &segment);
 /**
  * Return a new segment with a calcuated checksum fields
  */
-Segment updateChecksum(Segment segment);
+void updateChecksum(Segment &segment);
+// Segment updateChecksum(Segment segment);
 
 /**
  * Check if a TCP Segment has a valid checksum

@@ -5,9 +5,12 @@ bool isNumber(const std::string &str)
     return !str.empty() && std::all_of(str.begin(), str.end(), ::isdigit);
 }
 
-void commandLine(char symbol, std::string str)
-{
-    std::cout << "[" << symbol << "] " << str;
+void commandLine(char symbol, std::string str) {
+    std::cout<<"["<<symbol<<"] "<< str <<std::endl;
+}
+
+std::string brackets(std::string str){
+    return " ["+str+"] ";
 }
 
 void commandLineHandshakeReceiver(

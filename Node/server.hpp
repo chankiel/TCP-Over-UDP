@@ -16,7 +16,7 @@ public:
   void run() override;
 
   ConnectionResult respondHandshake(string dest_ip, uint16_t dest_port);
-  ConnectionResult respondFin(string dest_ip, uint16_t dest_port, uint32_t seqNum);
+  ConnectionResult respondFin(string dest_ip, uint16_t dest_port, uint32_t seqNum, uint32_t ackNum);
   ConnectionResult listenBroadcast();
 };
 
