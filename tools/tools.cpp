@@ -9,6 +9,10 @@ void commandLine(char symbol, std::string str) {
     std::cout<<"["<<symbol<<"] "<< str <<std::endl;
 }
 
+std::string brackets(std::string str){
+    return " ["+str+"] ";
+}
+
 void commandLineHandshakeReceiver(
     int *ack,
     int *sync,
