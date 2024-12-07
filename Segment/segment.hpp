@@ -70,7 +70,7 @@ const uint8_t FIN_ACK_FLAG = FIN_FLAG | ACK_FLAG;
 
 // Payload size di options 32 bit
 const uint32_t HEADER_SIZE = 24;
-const uint32_t MAX_PAYLOAD_SIZE = 1476;
+const uint32_t MAX_PAYLOAD_SIZE = 20;
 const uint32_t MAX_SEGMENT_SIZE = HEADER_SIZE + MAX_PAYLOAD_SIZE; // MTU: 1500
 
 /**
