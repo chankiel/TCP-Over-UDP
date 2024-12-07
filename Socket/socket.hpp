@@ -17,6 +17,7 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+#include "../tools/tools.hpp"
 
 using std::condition_variable;
 using std::lock_guard;
@@ -26,7 +27,8 @@ using std::vector;
 
 constexpr uint32_t DEFAULT_TIMEOUT = 2;
 
-enum class TCPState {
+enum class TCPStatusEnum
+{
   LISTENING,
   SYN_SENT,
   SYN_RECEIVED,
@@ -40,21 +42,12 @@ enum class TCPState {
   CLOSED
 };
 
-const std::map<TCPState, std::string> TCPStateDescriptions = {
-    {TCPState::LISTENING, "LISTENING"},
-    {TCPState::SYN_SENT, "SYN_SENT"},
-    {TCPState::SYN_RECEIVED, "SYN_RECEIVED"},
-    {TCPState::ESTABLISHED, "ESTABLISHED"},
-    {TCPState::FIN_WAIT_1, "FIN_WAIT_1"},
-    {TCPState::FIN_WAIT_2, "FIN_WAIT_2"},
-    {TCPState::CLOSE_WAIT, "CLOSE_WAIT"},
-    {TCPState::CLOSING, "CLOSING"},
-    {TCPState::LAST_ACK, "LAST_ACK"},
-    {TCPState::TIME_WAIT, "TIME_WAIT"},
-    {TCPState::CLOSED, "CLOSED"},
-};
+const std::vector<std::string> status_strings = {
+    "LISTENING", "SYN_SENT", "SYN_RECEIVED", "ESTABLISHED", "FIN_WAIT_1",
+    "FIN_WAIT_2", "CLOSE_WAIT", "CLOSING", "LAST_ACK", "TIME_WAIT", "CLOSED"};
 
-class TCPSocket {
+class TCPSocket
+{
 private:
   string ip;
   int32_t port;
@@ -62,10 +55,10 @@ private:
   vector<Message> packetBuffer;
   mutex bufferMutex;
   condition_variable bufferCondition;
-  TCPState socketState;
+  TCPStatusEnum status;
   bool isListening;
   std::thread listenerThread;
-  SegmentHandler *segmentHandler;
+  SegmentHandler *sh;
 
   sockaddr_in createSockAddr(const string &ipAddress, int port);
 
@@ -89,14 +82,14 @@ public:
   void produceBuffer();
   Message consumeBuffer(const string &filterIP = "", uint16_t filterPort = 0,
                         uint32_t filterSeqNum = 0, uint32_t filterAckNum = 0,
-                        uint8_t filterFlags = 0, int timeout = -1);
+                        uint8_t filterFlags = 0, int timeout = 10);
 
-  void sendBackN(u_int8_t *dataStream, uint32_t dataSize, const string &destIP,
-                 uint16_t destPort);
-  void receieveBackN(string dest_ip, uint16_t dest_port);
+  void sendBackN(uint8_t *dataStream, uint32_t dataSize,
+                 const string &destIP, uint16_t destPort, uint32_t startingSeqNum);
+  void receiveBackN(vector<Segment> &resBuffer,string dest_ip, uint16_t dest_port, uint32_t seqNum);
 
-  void setSocketState(TCPState newState);
-  TCPState getSocketState() const;
+  void setStatus(TCPStatusEnum newState);
+  TCPStatusEnum getStatus() const;
   void close();
 };
 
