@@ -30,7 +30,7 @@ ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port)
       Segment synSeg = synAck(sequence_num_second, ack_num_second);
       // std::cout << synSeg.seqNum << " " << synSeg.ackNum << std::endl;
       connection->sendSegment(synSeg, dest_ip, dest_port);
-      connection->setSocketState(TCPState::SYN_SENT);
+      connection->setStatus(TCPStatusEnum::SYN_SENT);
 
       // Received ACK Request
       Message ack_message = connection->consumeBuffer(destIP, destPort, 0, 0, ACK_FLAG);
@@ -147,8 +147,11 @@ void Server::run()
   connection->startListening();
   ConnectionResult statusBroadcast = listenBroadcast();
   ConnectionResult statusHandshake = respondHandshake(statusBroadcast.ip,statusBroadcast.port);
+  cout<<statusHandshake.seqNum<<" "<<statusHandshake.ackNum<<endl;
   // std::cout<<statusHandshake.seqNum<<" "<<statusHandshake.ackNum<<std::endl;
-  ConnectionResult statusFin = respondFin(statusBroadcast.ip,statusBroadcast.port,statusHandshake.ackNum,statusHandshake.seqNum+1);
+  string test = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam in lacus id velit convallis gravida non eu nibh. Vivamus dictum auctor libero volutpat efficitur. Nunc luctus justo sed aliquet pulvinar. Interdum et malesuada fames ac ante ipsum primis in faucibus. Donec rhoncus, sem sed varius pellentesque, dui elit blandit risus, a facilisis felis nunc vehicula lectus. Vestibulum nec dui dapibus, rhoncus nulla sed, malesuada arcu. Nunc eleifend congue molestie. Etiam eu tellus pretium, posuere leo a, tincidunt diam. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Nullam eget erat ut arcu volutpat malesuada. Donec id magna consectetur, rutrum ex ut, congue elit.";
+  connection->sendBackN((uint8_t*) test.data(), static_cast<uint16_t>(test.length()),statusBroadcast.ip,statusBroadcast.port,statusHandshake.ackNum);
+  // ConnectionResult statusFin = respondFin(statusBroadcast.ip,statusBroadcast.port,statusHandshake.ackNum,statusHandshake.seqNum+1);
   if (statusBroadcast.success)
   {
     std::cout << "SUCCESS" << std::endl;

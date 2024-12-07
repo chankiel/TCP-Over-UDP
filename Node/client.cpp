@@ -125,7 +125,7 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
     try {
       // Send syn?
       connection->sendSegment(synSegment, dest_ip, dest_port);
-      connection->setSocketState(TCPState::SYN_SENT);
+      connection->setStatus(TCPStatusEnum::SYN_SENT);
 
       commandLine('i', "[Established] [Seg 1] [S=" + std::to_string(r_seq_num) + "] Sending SYN request to " + dest_ip + ":" + std::to_string(dest_port));
 
@@ -133,7 +133,7 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
       Message result = connection->consumeBuffer(dest_ip, dest_port, 0, r_seq_num + 1, SYN_ACK_FLAG, 10);
       Segment synAckSegment = result.segment;
       // std::cout << synAckSegment.seqNum << " " << spynAckSegment.ackNum << std::endl;
-      connection->setSocketState(TCPState::ESTABLISHED);
+      connection->setStatus(TCPStatusEnum::ESTABLISHED);
 
       commandLine('~', "[Established] Waiting for segments to be ACKed");
       commandLine('i', "[Established] [Seg 1] [S=" + std::to_string(synAckSegment.seqNum) + "] [A=" + std::to_string(synAckSegment.ackNum) + "] Received SYN-ACK request from " + result.ip + ":" + std::to_string(result.port));
@@ -161,7 +161,11 @@ void Client::run()
   connection->startListening();
   ConnectionResult statusBroadcast = findBroadcast("255.255.255.255", serverPort);
   ConnectionResult statusHandshake = startHandshake(statusBroadcast.ip,statusBroadcast.port);
-  ConnectionResult statusFin = startFin(statusBroadcast.ip,statusBroadcast.port,statusHandshake.ackNum,statusHandshake.seqNum+1);
+  cout<<statusHandshake.seqNum<<" "<<statusHandshake.ackNum<<endl;
+
+  vector<Segment> res;
+  connection->receiveBackN(res,statusBroadcast.ip,statusBroadcast.port,statusHandshake.seqNum+1);
+  // ConnectionResult statusFin = startFin(statusBroadcast.ip,statusBroadcast.port,statusHandshake.ackNum,statusHandshake.seqNum+1);
   if (statusBroadcast.success)
   {
     std::cout << "SUCCESS" << std::endl;
