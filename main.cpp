@@ -97,6 +97,7 @@ int main(int argc, char *argv[])
       server.setItem(userInput); // set item (boleh pindah tempat lain kalo mau)
       // std::cout << server.getItem() << std::endl;
       // std::cout << stringToBinary(server.getItem()) << std::endl;
+      server.setFileEx("-1");
       commandLine('+', "User input has been successfully received.");
     }
     else if (sending_mode_choice == 2)

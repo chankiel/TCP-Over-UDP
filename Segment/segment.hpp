@@ -36,7 +36,7 @@ struct Segment {
   uint16_t window;
   uint16_t checksum;
   uint16_t urgPointer;
-  uint32_t payloadSize;
+  uint32_t payloadSize; 
   uint8_t *payload;
   Segment()
       : sourcePort(0), destPort(0), seqNum(0), ackNum(0), window(0),
@@ -70,7 +70,7 @@ const uint8_t FIN_ACK_FLAG = FIN_FLAG | ACK_FLAG;
 
 // Payload size di options 32 bit
 const uint32_t HEADER_SIZE = 24;
-const uint32_t MAX_PAYLOAD_SIZE = 20;
+const uint32_t MAX_PAYLOAD_SIZE = 3;
 const uint32_t MAX_SEGMENT_SIZE = HEADER_SIZE + MAX_PAYLOAD_SIZE; // MTU: 1500
 
 /**

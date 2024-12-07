@@ -84,20 +84,9 @@ bool TCPSocket::send(const string &destinationIP, int32_t destinationPort,
 void TCPSocket::sendSegment(const Segment &segment, const string &destinationIP,
                             uint16_t destinationPort)
 {
-  // auto updatedSegment = updateChecksum(segment);
-  // uint32_t segmentSize = updatedSegment.payloadSize + 24;
-
-  // auto *buffer = new uint8_t[segmentSize];
-  // encodeSegment(updatedSegment, buffer);
-  // send(destinationIP, destinationPort, buffer, segmentSize);
-  // std::cout << "procedurBuffer checksum calc: " << calculateChecksum(segment)
-  //           << std::endl;
-
   uint32_t segmentSize = segment.payloadSize + 24;
   auto *buffer = new uint8_t[segmentSize];
   encodeSegment(segment, buffer);
-  // std::cout << "procedurBuffer checksum inside: " << segment.checksum
-  //           << std::endl;
   send(destinationIP, destinationPort, buffer, segmentSize);
   delete[] buffer;
 }
@@ -135,18 +124,6 @@ void TCPSocket::produceBuffer()
 
       Segment segment = decodeSegment(dataBuffer, bytesRead);
       delete[] dataBuffer;
-      // std::cout << "procedurBuffer debug" << std::endl;
-      // // printSegment(segment);
-      // std::cout << "procedurBuffer checksum inside: " << segment.checksum
-      //           << std::endl;
-      // std::cout << "procedurBuffer checksum calc: "
-      //           << calculateChecksum(segment) << std::endl;
-      // if (!isValidChecksum(segment)) { // error pas masuk isvalid
-      // checksum
-      if (segment.checksum != calculateChecksum(segment))
-      {
-        continue;
-      }
 
       Message message(inet_ntoa(clientAddress.sin_addr),
                       ntohs(clientAddress.sin_port), segment);
@@ -234,41 +211,30 @@ void TCPSocket::close()
   }
 }
 
-void TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
+ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
                           const string &destIP, uint16_t destPort,
                           uint32_t startingSeqNum)
 {
   sh->setDataStream(dataStream, dataSize, startingSeqNum, port, destPort);
-  cout << "Awal: " << sh->getCurrentSeqNum() << " " << sh->getCurrentAckNum()
-       << endl;
   vector<thread> threads;
   std::atomic<bool> retry(false);
   bool endOfSegBuffer = false;
   while (true)
   {
-    // cout << "SeqNum and AckNum: " << sh->getCurrentSeqNum() << " " <<
-    // sh->getCurrentAckNum() << endl;
     while (sh->getCurrentSeqNum() - sh->getCurrentAckNum() <
            sh->getWindowSize())
     {
       Segment *seg = sh->advanceWindow(1);
       if (seg == nullptr)
       {
-        // cout << "SeqNum and AckNum: " << sh->getCurrentSeqNum() << " " <<
-        // sh->getCurrentAckNum() << endl;
-
-        // cout << "END BUFFER" << endl;
         endOfSegBuffer = true;
         break;
       }
-      // cout<<"Luar thread: "<<endl;
-      // printSegment(*seg);
       threads.emplace_back([this, seg = *seg, destIP, destPort, startingSeqNum,
                             &retry]()
                            {
         try {
-          // cout<<"Dalam thread: "<<endl;
-          // printSegment(seg);
+          cout<<endl;
           std::cout << OUT << brackets(status_strings[(int)status])
                     << brackets("Seq " +
                                 std::to_string(seg.seqNum - startingSeqNum))
@@ -281,7 +247,6 @@ void TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
               'i', "[Established] [A=" + std::to_string(result.segment.ackNum) +
                        "] Received ACK request from " + result.ip + ":" +
                        std::to_string(result.port));
-          // printSegment(seg);
           sh->ackWindow(seg.seqNum);
         } catch (const std::runtime_error &e) {
           std::cout << OUT << brackets("TIMEOUT")
@@ -312,8 +277,6 @@ void TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
       threads.clear();
       retry = false;
     }
-    // cout << "SeqNum and AckNum: "<<sh->getCurrentSeqNum() << " " <<
-    // sh->getCurrentAckNum() << endl;
   }
   for (auto &t : threads)
   {
@@ -325,9 +288,10 @@ void TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
   threads.clear();
   std::cout << OUT << brackets(status_strings[(int)status])
             << "All segments sent to " << destIP << ":" << destPort << endl;
+  return ConnectionResult(true,destIP,destPort,sh->getCurrentSeqNum(),sh->getCurrentSeqNum());
 }
 
-string concatenatePayloads(vector<Segment> &segments)
+string TCPSocket::concatenatePayloads(vector<Segment> &segments)
 {
   string concatenatedData;
   for (const auto &segment : segments)
@@ -340,7 +304,7 @@ string concatenatePayloads(vector<Segment> &segments)
   return concatenatedData;
 }
 
-void TCPSocket::receiveBackN(vector<Segment> &resBuffer, string destIP,
+ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer, string destIP,
                              uint16_t destPort, uint32_t seqNum)
 {
   int i = 0;
@@ -352,14 +316,10 @@ void TCPSocket::receiveBackN(vector<Segment> &resBuffer, string destIP,
     try
     {
       Message res = consumeBuffer(destIP, destPort);
-      // std::cout << std::to_string(res.segment.seqNum) << " " <<
-      // std::to_string(seqNumIt) << endl;
       if (res.segment.seqNum < seqNumIt)
       {
-        // cout << "SIni: " << endl;
         sendSegment(ack(0, res.segment.seqNum + 1), destIP, destPort);
       }
-
       if (res.segment.seqNum == seqNumIt)
       {
         i++;
@@ -375,13 +335,9 @@ void TCPSocket::receiveBackN(vector<Segment> &resBuffer, string destIP,
                   << brackets("A=" + std::to_string(seqNumIt)) << "Sent"
                   << endl;
 
-        // TESTING PURPOSES
-        // string concatenatedData = concatenatePayloads(resBuffer);
-        // std::cout << "Concatenated Payload Data: " << concatenatedData << std::endl;
-
         if (res.segment.flags.ece == 1)
         {
-          break;
+          return ConnectionResult(true, destIP, destPort, seqNum, 0);
         }
       }
     }
@@ -391,4 +347,5 @@ void TCPSocket::receiveBackN(vector<Segment> &resBuffer, string destIP,
       commandLine('!', "[ERROR] [Established] " + std::string(e.what()));
     }
   }
+  return ConnectionResult(false, destIP, destPort, seqNum, 0);
 }
