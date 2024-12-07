@@ -168,24 +168,21 @@ void Server::run()
 {
   connection->listen();
   connection->startListening();
-
-  ConnectionResult statusBroadcast = listenBroadcast();
-  if (statusBroadcast.success)
-  {
-    ConnectionResult statusHandshake =
-        respondHandshake(statusBroadcast.ip, statusBroadcast.port);
-    if (statusHandshake.success)
+  while(true){
+    ConnectionResult statusBroadcast = listenBroadcast();
+    if (statusBroadcast.success)
     {
-      ConnectionResult statusSend = connection->sendBackN(
-          (uint8_t *)item.data(), static_cast<uint16_t>(item.length()),
-          statusBroadcast.ip, statusBroadcast.port, statusHandshake.ackNum);
-      if (statusSend.success)
+      ConnectionResult statusHandshake =
+          respondHandshake(statusBroadcast.ip, statusBroadcast.port);
+      if (statusHandshake.success)
       {
-        ConnectionResult statusFin = startFin(statusBroadcast.ip, statusBroadcast.port,
-                                              statusHandshake.seqNum, statusHandshake.ackNum);
-        if (statusFin.success)
+        ConnectionResult statusSend = connection->sendBackN(
+            (uint8_t *)item.data(), static_cast<uint16_t>(item.length()),
+            statusBroadcast.ip, statusBroadcast.port, statusHandshake.ackNum);
+        if (statusSend.success)
         {
-          std::cout << "SUCCESS" << std::endl;
+          ConnectionResult statusFin = startFin(statusBroadcast.ip, statusBroadcast.port,
+                                                statusHandshake.seqNum, statusHandshake.ackNum);
         }
       }
     }

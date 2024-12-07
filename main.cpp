@@ -94,9 +94,7 @@ int main(int argc, char *argv[])
       std::string userInput;
       std::cin.ignore();
       std::getline(std::cin, userInput);
-      server.setItem(userInput); // set item (boleh pindah tempat lain kalo mau)
-      // std::cout << server.getItem() << std::endl;
-      // std::cout << stringToBinary(server.getItem()) << std::endl;
+      server.setItem(userInput);
       server.setFileEx("-1");
       commandLine('+', "User input has been successfully received.");
     }

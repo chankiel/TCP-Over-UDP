@@ -86,3 +86,8 @@ void SegmentHandler::goBackWindow() {
   dataIndex -= (currentSeqNum - currentAckNum);
   currentSeqNum = currentAckNum;
 }
+
+bool SegmentHandler::isFinished(uint32_t startingSeqNum){
+  lock_guard<mutex> lock(mtx);
+  return currentAckNum - startingSeqNum + 1 == segmentBuffer.size()/2;
+}

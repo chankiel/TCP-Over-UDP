@@ -212,13 +212,12 @@ void TCPSocket::close()
 }
 
 ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
-                          const string &destIP, uint16_t destPort,
-                          uint32_t startingSeqNum)
+                                      const string &destIP, uint16_t destPort,
+                                      uint32_t startingSeqNum)
 {
   sh->setDataStream(dataStream, dataSize, startingSeqNum, port, destPort);
   vector<thread> threads;
   std::atomic<bool> retry(false);
-  bool endOfSegBuffer = false;
   while (true)
   {
     while (sh->getCurrentSeqNum() - sh->getCurrentAckNum() <
@@ -227,7 +226,6 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
       Segment *seg = sh->advanceWindow(1);
       if (seg == nullptr)
       {
-        endOfSegBuffer = true;
         break;
       }
       threads.emplace_back([this, seg = *seg, destIP, destPort, startingSeqNum,
@@ -260,8 +258,9 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
           }
         } });
     }
-    if (sh->getCurrentAckNum() == sh->getCurrentSeqNum() && endOfSegBuffer)
+    if (sh->isFinished(startingSeqNum))
     {
+      cout << "PEPEK" << endl;
       break;
     }
 
@@ -286,9 +285,11 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
     }
   }
   threads.clear();
+
   std::cout << OUT << brackets(status_strings[(int)status])
             << "All segments sent to " << destIP << ":" << destPort << endl;
-  return ConnectionResult(true,destIP,destPort,sh->getCurrentSeqNum(),sh->getCurrentSeqNum());
+  // cout<<"Ack Num: "<<sh->getCurrentAckNum()<<", Seq Num: "<<sh->getCurrentSeqNum()<<", EndOfBuffer: "<<endOfSegBuffer<<endl;
+  return ConnectionResult(true, destIP, destPort, 0, 0);
 }
 
 string TCPSocket::concatenatePayloads(vector<Segment> &segments)
@@ -305,7 +306,7 @@ string TCPSocket::concatenatePayloads(vector<Segment> &segments)
 }
 
 ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer, string destIP,
-                             uint16_t destPort, uint32_t seqNum)
+                                         uint16_t destPort, uint32_t seqNum)
 {
   int i = 0;
   bool finished = false;

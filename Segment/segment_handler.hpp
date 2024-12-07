@@ -34,7 +34,7 @@ public:
   uint32_t getCurrentSeqNum();
   uint32_t getCurrentAckNum();
   void goBackWindow();
-
+  bool isFinished(uint32_t startingSeqNum);
 };
 
 #endif
