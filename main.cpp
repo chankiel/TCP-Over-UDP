@@ -10,42 +10,56 @@
 #include <iostream>
 #include <string>
 
-
-std::string transformFilePath(const std::string &filePath) {
+std::string transformFilePath(const std::string &filePath)
+{
   std::ostringstream transformedPath;
-  for (char ch : filePath) {
-    if (ch == '\\') {
+  for (char ch : filePath)
+  {
+    if (ch == '\\')
+    {
       transformedPath << "\\\\";
-    } else {
+    }
+    else
+    {
       transformedPath << ch;
     }
   }
   return transformedPath.str();
 }
 
-bool fileExists(const std::string &filePath) {
+bool fileExists(const std::string &filePath)
+{
   std::ifstream file(filePath);
   return file.good();
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   // Default values
   std::string ip = "localhost";
   int port = 8080; // Default port
 
   // Process arguments
-  if (argc > 1) {            // Check if at least one argument is provided
-    if (isNumber(argv[1])) { // If the first argument is a port
+  if (argc > 1)
+  { // Check if at least one argument is provided
+    if (isNumber(argv[1]))
+    { // If the first argument is a port
       port = std::stoi(argv[1]);
-    } else { // Otherwise, it's an IP
+    }
+    else
+    { // Otherwise, it's an IP
       ip = argv[1];
     }
   }
 
-  if (argc > 2) { // Check if the second argument (port) is provided
-    if (isNumber(argv[2])) {
+  if (argc > 2)
+  { // Check if the second argument (port) is provided
+    if (isNumber(argv[2]))
+    {
       port = std::stoi(argv[2]);
-    } else {
+    }
+    else
+    {
       std::cerr << "Invalid port provided. Using default port: 8080\n";
     }
   }
@@ -61,7 +75,8 @@ int main(int argc, char *argv[]) {
   int operating_mode_choice;
   std::cin >> operating_mode_choice;
 
-  if (operating_mode_choice == 1) {
+  if (operating_mode_choice == 1)
+  {
     commandLine('+', "Node is now a sender");
 
     commandLine('i', "Sender Program’s Initialization");
@@ -73,14 +88,19 @@ int main(int argc, char *argv[]) {
     int sending_mode_choice;
     std::cin >> sending_mode_choice;
 
-    if (sending_mode_choice == 1) {
+    if (sending_mode_choice == 1)
+    {
       commandLine('?', "Input mode chosen, please enter your input: ");
       std::string userInput;
       std::cin.ignore();
       std::getline(std::cin, userInput);
       server.setItem(userInput); // set item (boleh pindah tempat lain kalo mau)
+      // std::cout << server.getItem() << std::endl;
+      // std::cout << stringToBinary(server.getItem()) << std::endl;
       commandLine('+', "User input has been successfully received.");
-    } else if (sending_mode_choice == 2) {
+    }
+    else if (sending_mode_choice == 2)
+    {
       commandLine('?', "File mode chosen, please enter the file path: ");
       std::string filePath;
       std::cin.ignore();
@@ -88,7 +108,8 @@ int main(int argc, char *argv[]) {
 
       std::string transformedFilePath = transformFilePath(filePath);
 
-      if (std::filesystem::exists(transformedFilePath)) {
+      if (std::filesystem::exists(transformedFilePath))
+      {
         commandLine('+', "File has been successfully read.");
         convertToFileContentAndSetItem(
             transformedFilePath, server); // udah include setItem di server
@@ -111,7 +132,8 @@ int main(int argc, char *argv[]) {
         std::string fileName = filePathObj.stem().string();
         std::string fileExtension = filePathObj.extension().string();
 
-        if (!fileExtension.empty() && fileExtension[0] == '.') {
+        if (!fileExtension.empty() && fileExtension[0] == '.')
+        {
           fileExtension.erase(0, 1);
         }
 
@@ -120,21 +142,32 @@ int main(int argc, char *argv[]) {
         server.setFileName(fileName);
         server.setFileEx(fileExtension);
 
+        // BINARY CONVERSION TESTING
+        // std::cout << server.getItem() << std::endl;
+        // std::cout << stringToBinary(server.getItem()) << std::endl;
+        // std::cout << binaryToString(stringToBinary(server.getItem())) << endl;
+
         // SERVER HERE ONLY FOR TESTING PURPOSES
         // std::string fullFileName = fileName + "." + fileExtension;
         // convertFromServerToFile(fullFileName, server);
-      } else {
+      }
+      else
+      {
         commandLine('-', "Error: File does not exist at the specified path.");
         return 1;
       }
-    } else {
+    }
+    else
+    {
       throw std::runtime_error("Invalid sending mode choice");
     }
 
     commandLine('i', "Listening to the broadcast port for clients.");
 
     server.run();
-  } else if (operating_mode_choice == 2) {
+  }
+  else if (operating_mode_choice == 2)
+  {
     commandLine('+', "Node is now a receiver");
     commandLine('?', "Input the server program's port: ");
 
@@ -164,7 +197,9 @@ int main(int argc, char *argv[]) {
     client.run();
 
     // convertFromClientToFile(fullFileName, client);
-  } else {
+  }
+  else
+  {
     throw std::runtime_error("Invalid argument");
   }
 
