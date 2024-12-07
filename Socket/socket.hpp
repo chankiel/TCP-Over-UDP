@@ -86,7 +86,8 @@ public:
 
   void sendBackN(uint8_t *dataStream, uint32_t dataSize,
                  const string &destIP, uint16_t destPort, uint32_t startingSeqNum);
-  void receiveBackN(vector<Segment> &resBuffer,string dest_ip, uint16_t dest_port, uint32_t seqNum);
+  string concatenatePayloads(vector<Segment> &segments);
+  void receiveBackN(vector<Segment> &resBuffer, string dest_ip, uint16_t dest_port, uint32_t seqNum);
 
   void setStatus(TCPStatusEnum newState);
   TCPStatusEnum getStatus() const;
