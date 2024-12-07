@@ -69,6 +69,8 @@ ConnectionResult Server::listenBroadcast() {
     try {
       Message answer =
           connection->consumeBuffer("", 0, 0, 0, 0, SERVER_BROADCAST_TIMEOUT);
+      std::cout << answer.ip << std::endl;
+      commandLine('+', "Received Broadcast Message\n");
       commandLine('+', "Received Broadcast Message");
       Segment temp = accBroad();
       updateChecksum(temp);
@@ -213,12 +215,27 @@ ConnectionResult Server::respondFin(string dest_ip, uint16_t dest_port,
 void Server::run() {
   connection->listen();
   connection->startListening();
+
   ConnectionResult statusBroadcast = listenBroadcast();
-  ConnectionResult statusHandshake = respondHandshake(statusBroadcast.ip,statusBroadcast.port);
-  cout<<statusHandshake.seqNum<<" "<<statusHandshake.ackNum<<endl;
+  ConnectionResult statusHandshake =
+      respondHandshake(statusBroadcast.ip, statusBroadcast.port);
+  cout << statusHandshake.seqNum << " " << statusHandshake.ackNum << endl;
   // std::cout<<statusHandshake.seqNum<<" "<<statusHandshake.ackNum<<std::endl;
-  string test = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam in lacus id velit convallis gravida non eu nibh. Vivamus dictum auctor libero volutpat efficitur. Nunc luctus justo sed aliquet pulvinar. Interdum et malesuada fames ac ante ipsum primis in faucibus. Donec rhoncus, sem sed varius pellentesque, dui elit blandit risus, a facilisis felis nunc vehicula lectus. Vestibulum nec dui dapibus, rhoncus nulla sed, malesuada arcu. Nunc eleifend congue molestie. Etiam eu tellus pretium, posuere leo a, tincidunt diam. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Nullam eget erat ut arcu volutpat malesuada. Donec id magna consectetur, rutrum ex ut, congue elit.";
-  connection->sendBackN((uint8_t*) test.data(), static_cast<uint16_t>(test.length()),statusBroadcast.ip,statusBroadcast.port,statusHandshake.ackNum);
+  string test =
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam in "
+      "lacus id velit convallis gravida non eu nibh. Vivamus dictum auctor "
+      "libero volutpat efficitur. Nunc luctus justo sed aliquet pulvinar. "
+      "Interdum et malesuada fames ac ante ipsum primis in faucibus. Donec "
+      "rhoncus, sem sed varius pellentesque, dui elit blandit risus, a "
+      "facilisis felis nunc vehicula lectus. Vestibulum nec dui dapibus, "
+      "rhoncus nulla sed, malesuada arcu. Nunc eleifend congue molestie. Etiam "
+      "eu tellus pretium, posuere leo a, tincidunt diam. Orci varius natoque "
+      "penatibus et magnis dis parturient montes, nascetur ridiculus mus. "
+      "Nullam eget erat ut arcu volutpat malesuada. Donec id magna "
+      "consectetur, rutrum ex ut, congue elit.";
+  connection->sendBackN(
+      (uint8_t *)test.data(), static_cast<uint16_t>(test.length()),
+      statusBroadcast.ip, statusBroadcast.port, statusHandshake.ackNum);
   ConnectionResult statusFin =
       respondFin(statusBroadcast.ip, statusBroadcast.port,
                  statusHandshake.seqNum, statusHandshake.ackNum); // -1

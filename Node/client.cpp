@@ -16,7 +16,7 @@ ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port) {
   std::cout << dest_ip << " " << dest_port << std::endl;
   for (int i = 0; i < CLIENT_MAX_TRY; i++) {
     try {
-      // Segment temp = createSegment("AWD",port,dest_port);
+      // Segment temp = createSegment("AWD", port, dest_port);
       Segment temp = broad();
       updateChecksum(temp);
 
