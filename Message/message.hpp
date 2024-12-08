@@ -12,6 +12,7 @@ public:
     uint16_t port;
     Segment segment;
 
+    Message(): ip(""),port(0),segment(createSegment("",0,0)){}
     // Constructor
     Message(const std::string &ip, uint16_t port, const Segment &segment);
 
