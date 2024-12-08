@@ -1,26 +1,23 @@
 #include "client.hpp"
 #include "../Socket/socket.hpp"
+#include "../tools/fileReceiver.hpp"
 #include "../tools/tools.hpp"
 #include <cstdlib> // For malloc and free
 #include <pthread.h>
 #include <random>
 #include <stdexcept>
 #include <string>
-#include "../tools/fileReceiver.hpp"
 
 int CLIENT_BROADCAST_TIMEOUT = 12; // temporary
 int CLIENT_COMMON_TIMEOUT = 12;    // temporary
 int CLIENT_MAX_TRY = 10;
 
-ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port)
-{
+ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port) {
   connection->setBroadcast();
 
   std::cout << dest_ip << " " << dest_port << std::endl;
-  for (int i = 0; i < CLIENT_MAX_TRY; i++)
-  {
-    try
-    {
+  for (int i = 0; i < CLIENT_MAX_TRY; i++) {
+    try {
       // Segment temp = createSegment("AWD", port, dest_port);
       Segment temp = broad();
       updateChecksum(temp);
@@ -48,9 +45,7 @@ ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port)
       commandLine('i', "Someone received the broadcast");
       return ConnectionResult(true, answer.ip, answer.port,
                               answer.segment.seqNum, answer.segment.ackNum);
-    }
-    catch (const std::runtime_error &e)
-    {
+    } catch (const std::runtime_error &e) {
       commandLine('x', "Timeout " + std::to_string(i + 1));
       continue;
     }
@@ -59,10 +54,9 @@ ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port)
 }
 
 ConnectionResult Client::respondFin(string dest_ip, uint16_t dest_port,
-                                    uint32_t seqNum, uint32_t ackNum)
-{
-  Message rec_fin = connection->consumeBuffer(
-      dest_ip, dest_port, 0, seqNum + 1, FIN_FLAG, CLIENT_COMMON_TIMEOUT);
+                                    uint32_t seqNum, uint32_t ackNum) {
+  Message rec_fin = connection->consumeBuffer(dest_ip, dest_port, 0, seqNum + 1,
+                                              FIN_FLAG, CLIENT_COMMON_TIMEOUT);
   commandLine('+', "[Closing] [S=" + to_string(rec_fin.segment.seqNum) +
                        "] [A=" + to_string(rec_fin.segment.ackNum) +
                        "] Received FIN request from  " + dest_ip +
@@ -70,17 +64,15 @@ ConnectionResult Client::respondFin(string dest_ip, uint16_t dest_port,
   // Send ACK
   Segment ackSeg = ack(seqNum + 1, rec_fin.segment.seqNum + 1);
   updateChecksum(ackSeg);
+  cout << ackSeg.checksum << endl;
 
   connection->sendSegment(ackSeg, dest_ip, dest_port);
-  commandLine('i', "[Closing] [S=" + to_string(ackSeg.seqNum) +
-                       "] [A=" + to_string(ackSeg.ackNum) +
-                       "] Send ACK request from  " + dest_ip +
-                       to_string(dest_port));
+  commandLine('i', "[Closing] [S=" + to_string(ackSeg.seqNum) + "] [A=" +
+                       to_string(ackSeg.ackNum) + "] Send ACK request from  " +
+                       dest_ip + to_string(dest_port));
 
-  for (int i = 0; i < CLIENT_MAX_TRY; i++)
-  {
-    try
-    {
+  for (int i = 0; i < CLIENT_MAX_TRY; i++) {
+    try {
       // Send FIN
       Segment finSeg = fin(seqNum + 2, rec_fin.segment.seqNum + 1);
       updateChecksum(finSeg);
@@ -103,17 +95,14 @@ ConnectionResult Client::respondFin(string dest_ip, uint16_t dest_port,
       commandLine('i', "Connection Closed");
 
       return ConnectionResult(true, dest_ip, dest_port, 0, 0);
-    }
-    catch (const std::runtime_error &e)
-    {
+    } catch (const std::runtime_error &e) {
       commandLine('x', "Timeout " + std::to_string(i + 1));
     }
   }
   return ConnectionResult(false, dest_ip, dest_port, 0, 0);
 }
 
-ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
-{
+ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port) {
   uint32_t r_seq_num = generateRandomNumber(10, 4294967295);
 
   commandLine('i', "Sender Program's Three Way Handshake");
@@ -121,10 +110,8 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
   Segment synSegment = syn(r_seq_num);
   updateChecksum(synSegment);
 
-  for (int i = 0; i < 10; i++)
-  {
-    try
-    {
+  for (int i = 0; i < 10; i++) {
+    try {
       // Send syn?
       connection->sendSegment(synSegment, dest_ip, dest_port);
       connection->setStatus(TCPStatusEnum::SYN_SENT);
@@ -151,15 +138,13 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
       connection->sendSegment(ackSegment, dest_ip, dest_port);
       commandLine('i', "[Handshake] [S=" + std::to_string(ackSegment.seqNum) +
                            "] [A=" + std::to_string(ackSegment.ackNum) +
-                           "] Sending SYN-ACK request to " + dest_ip + ":" +
+                           "] Sending ACK request to " + dest_ip + ":" +
                            std::to_string(dest_port));
       commandLine('~', "Ready to receive input from " + dest_ip + ":" +
                            std::to_string(dest_port));
       return ConnectionResult(true, dest_ip, dest_port, ackSegment.seqNum,
                               ackSegment.ackNum);
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception &e) {
       commandLine('e', "[Handshake] Attempt failed: " + std::string(e.what()));
     }
   }
@@ -167,37 +152,31 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
   return ConnectionResult(false, dest_ip, dest_port, 0, 0);
 }
 
-void Client::run()
-{
+void Client::run() {
   connection->listen();
   connection->startListening();
   ConnectionResult statusBroadcast =
       findBroadcast("255.255.255.255", serverPort);
-  if (statusBroadcast.success)
-  {
+  if (statusBroadcast.success) {
     ConnectionResult statusHandshake =
         startHandshake(statusBroadcast.ip, statusBroadcast.port);
-    if (statusHandshake.success)
-    {
+    if (statusHandshake.success) {
       vector<Segment> res;
-      ConnectionResult statusReceive = connection->receiveBackN(res, statusBroadcast.ip, statusBroadcast.port,
-                                                                statusHandshake.seqNum + 1);
-      if (statusReceive.success)
-      {
+      ConnectionResult statusReceive = connection->receiveBackN(
+          res, statusBroadcast.ip, statusBroadcast.port,
+          statusHandshake.seqNum + 1);
+      if (statusReceive.success) {
         ConnectionResult statusFin =
-            respondFin(statusBroadcast.ip, statusBroadcast.port, statusHandshake.seqNum,
-                       statusHandshake.ackNum);
-        if (statusFin.success)
-        {
-          if (res.back().flags.ece == 1)
-          {
-            std::string filename(reinterpret_cast<char *>(res.back().payload), res.back().payloadSize);
+            respondFin(statusBroadcast.ip, statusBroadcast.port,
+                       statusHandshake.seqNum, statusHandshake.ackNum);
+        if (statusFin.success) {
+          if (res.back().flags.ece == 1) {
+            std::string filename(reinterpret_cast<char *>(res.back().payload),
+                                 res.back().payloadSize);
             res.pop_back();
             string result = connection->concatenatePayloads(res);
             convertFromStrToFile(filename, result);
-          }
-          else
-          {
+          } else {
             string result = connection->concatenatePayloads(res);
             std::cout << "Result string: " << result << std::endl;
           }
