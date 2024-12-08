@@ -335,6 +335,8 @@ ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer,
 
         if (res.segment.flags.psh == 1) {
           cout << "Daniel" << endl;
+          cout << "Waiting" << endl;
+          std::this_thread::sleep_for(std::chrono::seconds(5));
           return ConnectionResult(true, destIP, destPort, seqNum, 0);
         }
       }
