@@ -1,22 +1,19 @@
 #include "segment_handler.hpp"
+#include "segment.hpp"
 
 SegmentHandler::SegmentHandler()
     : windowSize(5), currentSeqNum(0), currentAckNum(0), dataStream(nullptr),
       dataSize(0), dataIndex(0) {}
 
-SegmentHandler::~SegmentHandler()
-{
-  for (Segment &seg : segmentBuffer)
-  {
+SegmentHandler::~SegmentHandler() {
+  for (Segment &seg : segmentBuffer) {
     delete[] seg.payload;
   }
 }
 
 void SegmentHandler::generateSegments(uint32_t startingSeqNum,
-                                      uint16_t sourcePort, uint16_t destPort)
-{
-  for (Segment &seg : segmentBuffer)
-  {
+                                      uint16_t sourcePort, uint16_t destPort) {
+  for (Segment &seg : segmentBuffer) {
     delete[] seg.payload;
   }
   segmentBuffer.clear();
@@ -24,8 +21,7 @@ void SegmentHandler::generateSegments(uint32_t startingSeqNum,
 
   segmentBuffer.resize(numSegments);
   uint32_t iterator = 0;
-  for (uint32_t i = 0; i < numSegments; i++)
-  {
+  for (uint32_t i = 0; i < numSegments; i++) {
     uint32_t payloadSize =
         min(MAX_PAYLOAD_SIZE, dataSize - i * MAX_PAYLOAD_SIZE);
 
@@ -33,8 +29,7 @@ void SegmentHandler::generateSegments(uint32_t startingSeqNum,
     Segment &seg = segmentBuffer.back();
 
     seg.payload = new uint8_t[payloadSize];
-    memcpy(seg.payload,
-           static_cast<uint8_t *>(dataStream) + iterator,
+    memcpy(seg.payload, static_cast<uint8_t *>(dataStream) + iterator,
            payloadSize);
     seg.window = windowSize;
     seg.payloadSize = payloadSize;
@@ -43,6 +38,11 @@ void SegmentHandler::generateSegments(uint32_t startingSeqNum,
     seg.destPort = destPort;
 
     iterator += payloadSize;
+    // while (seg.checksum == 0)
+    // {
+    seg.checksum = calculateChecksum(seg);
+    updateChecksum(seg);
+    // }
   }
 
   dataIndex = numSegments - 1;
@@ -52,8 +52,7 @@ void SegmentHandler::generateSegments(uint32_t startingSeqNum,
 
 void SegmentHandler::setDataStream(uint8_t *dataStream, uint32_t dataSize,
                                    uint32_t startingSeqNum, uint16_t sourcePort,
-                                   uint16_t destPort)
-{
+                                   uint16_t destPort) {
   this->dataStream = dataStream;
   this->dataSize = dataSize;
   currentSeqNum = startingSeqNum - 1;
@@ -64,15 +63,11 @@ void SegmentHandler::setDataStream(uint8_t *dataStream, uint32_t dataSize,
 
 uint8_t SegmentHandler::getWindowSize() { return this->windowSize; }
 
-Segment *SegmentHandler::advanceWindow(uint8_t size)
-{
+Segment *SegmentHandler::advanceWindow(uint8_t size) {
   lock_guard<mutex> lock(mtx);
-  if (dataIndex + 1 >= segmentBuffer.size())
-  {
+  if (dataIndex + 1 >= segmentBuffer.size()) {
     return nullptr;
-  }
-  else
-  {
+  } else {
     currentSeqNum += size;
     dataIndex += 1;
   }
@@ -80,51 +75,43 @@ Segment *SegmentHandler::advanceWindow(uint8_t size)
   return &segmentBuffer[dataIndex];
 }
 
-void SegmentHandler::ackWindow(uint32_t seqNum)
-{
+void SegmentHandler::ackWindow(uint32_t seqNum) {
   lock_guard<mutex> lock(mtx);
-  if (seqNum > currentAckNum)
-  {
+  if (seqNum > currentAckNum) {
     currentAckNum = seqNum;
   }
 }
 
-uint32_t SegmentHandler::getCurrentSeqNum()
-{
+uint32_t SegmentHandler::getCurrentSeqNum() {
   lock_guard<mutex> lock(mtx);
   return currentSeqNum;
 }
 
-uint32_t SegmentHandler::getCurrentAckNum()
-{
+uint32_t SegmentHandler::getCurrentAckNum() {
   lock_guard<mutex> lock(mtx);
   return currentAckNum;
 }
 
-void SegmentHandler::goBackWindow()
-{
+void SegmentHandler::goBackWindow() {
   lock_guard<mutex> lock(mtx);
   dataIndex -= (currentSeqNum - currentAckNum);
   currentSeqNum = currentAckNum;
 }
 
-bool SegmentHandler::isFinished(uint32_t startingSeqNum)
-{
+bool SegmentHandler::isFinished(uint32_t startingSeqNum) {
   lock_guard<mutex> lock(mtx);
   return currentAckNum - startingSeqNum + 1 == (segmentBuffer.size() + 1) / 2;
 }
 
-void SegmentHandler::addMetadata(string fileFullName, uint16_t sourcePort, uint16_t destPort)
-{
+void SegmentHandler::addMetadata(string fileFullName, uint16_t sourcePort,
+                                 uint16_t destPort) {
   Segment seg = createSegment(fileFullName, sourcePort, destPort);
   seg.payloadSize = static_cast<uint16_t>(fileFullName.length());
   seg.window = windowSize;
-  seg.seqNum = segmentBuffer.back().seqNum+1;
+  seg.seqNum = segmentBuffer.back().seqNum + 1;
   seg.flags.ece = 1;
+  updateChecksum(seg);
   segmentBuffer.push_back(seg);
 }
 
-void SegmentHandler::markEOF()
-{
-  segmentBuffer.back().flags.psh = 1;
-}
+void SegmentHandler::markEOF() { segmentBuffer.back().flags.psh = 1; }

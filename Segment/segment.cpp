@@ -117,10 +117,10 @@ uint16_t calculateChecksum(Segment &segment) {
   addToSum(segment.destPort);
   addToSum(segment.seqNum >> 16);    // High 16 bits of seqNum
   addToSum(segment.seqNum & 0xFFFF); // Low 16 bits of seqNum
-  addToSum(segment.ackNum >> 16);    // High 16 bits of ackNum
-  addToSum(segment.ackNum & 0xFFFF); // Low 16 bits of ackNum
-  addToSum((segment.data_offset << 12) | (segment.reserved << 8) |
-           *((uint16_t *)&segment.flags));
+  // addToSum(segment.ackNum >> 16);    // High 16 bits of ackNum
+  // addToSum(segment.ackNum & 0xFFFF); // Low 16 bits of ackNum
+  // addToSum((segment.data_offset << 12) | (segment.reserved << 8) |
+  //          *((uint16_t *)&segment.flags));
 
   addToSum(segment.window);
   addToSum(segment.urgPointer);
@@ -205,9 +205,9 @@ bool isValidChecksum(Segment segment) {
   uint16_t curChecksum = segment.checksum;
   uint16_t computed = calculateChecksum(segment);
 
-  std::cout << "isValidChecksum debug" << std::endl;
-  std::cout << "computed: " << computed << std::endl;
-  std::cout << "inside: " << curChecksum << std::endl;
+  // std::cout << "isValidChecksum debug" << std::endl;
+  // std::cout << "computed: " << computed << std::endl;
+  // std::cout << "inside: " << curChecksum << std::endl;
   return computed == curChecksum;
   // return calculateChecksum(segment) == segment.checksum;
 }
