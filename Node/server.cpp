@@ -20,8 +20,8 @@ ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port)
           connection->consumeBuffer("", 0, 0, 0, SYN_FLAG, 10);
       connection->setStatus(TCPStatusEnum::SYN_RECEIVED);
       std::string destIP = sync_message.ip;
-      u_int16_t destPort = sync_message.port;
-      u_int32_t sequence_num_first = sync_message.segment.seqNum;
+      uint16_t destPort = sync_message.port;
+      uint32_t sequence_num_first = sync_message.segment.seqNum;
 
       commandLine(
           'i', "[" + status_strings[static_cast<int>(connection->getStatus())] +
@@ -31,7 +31,7 @@ ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port)
 
       // Sending SYN-ACK Request
       uint32_t sequence_num_second = generateRandomNumber(1, 1000);
-      u_int32_t ack_num_second = sequence_num_first + 1;
+      uint32_t ack_num_second = sequence_num_first + 1;
 
       commandLine(
           'i', "[" + status_strings[static_cast<int>(connection->getStatus())] +
@@ -49,8 +49,8 @@ ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port)
       Message ack_message =
           connection->consumeBuffer(destIP, destPort, 0, 0, ACK_FLAG);
       connection->setStatus(TCPStatusEnum::ESTABLISHED);
-      u_int32_t ack_num_third = ack_message.segment.ackNum;
-      u_int32_t seq_num_third = ack_message.segment.seqNum;
+      uint32_t ack_num_third = ack_message.segment.ackNum;
+      uint32_t seq_num_third = ack_message.segment.seqNum;
       commandLine(
           'i', "[" + status_strings[static_cast<int>(connection->getStatus())] +
                    "] [A=" + std::to_string(ack_num_third) +
