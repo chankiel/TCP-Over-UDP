@@ -5,71 +5,85 @@
 #include <sys/types.h>
 
 TCPSocket::TCPSocket(const string &ip, int port)
-    : ip(ip), port(port), isListening(false) {
+    : ip(ip), port(port), isListening(false)
+{
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-  if (sockfd < 0) {
+  if (sockfd < 0)
+  {
     throw std::runtime_error("Socket creation failed.");
   }
   status = TCPStatusEnum::CLOSED;
   sh = new SegmentHandler();
 }
 
-TCPSocket::~TCPSocket() {
+TCPSocket::~TCPSocket()
+{
   stopListening();
   close();
   delete sh;
 }
 
-void TCPSocket::listen() {
+void TCPSocket::listen()
+{
   sockaddr_in sockAddr = createSockAddr(ip, port);
 
-  if (bind(sockfd, (struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0) {
+  if (bind(sockfd, (struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0)
+  {
     throw std::runtime_error("Failed to bind socket");
   }
 
-  std::cout << "Socket bound and ready to receive data on port " << port
+  std::cout << OUT << " Socket bound and ready to receive data on port " << port
             << std::endl;
 }
 
-void TCPSocket::bindSocket() {
+void TCPSocket::bindSocket()
+{
   struct sockaddr_in sockAddr = createSockAddr(ip, port);
-  if (bind(sockfd, (const struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0) {
+  if (bind(sockfd, (const struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0)
+  {
     exit(EXIT_FAILURE);
   }
 }
 
-void TCPSocket::setBroadcast() {
+void TCPSocket::setBroadcast()
+{
   int enable = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &enable, sizeof(enable)) <
-      0) {
+      0)
+  {
     std::cout << "Broadcast failed" << std::endl;
     ::close(sockfd);
     exit(EXIT_FAILURE);
   }
 }
 
-sockaddr_in TCPSocket::createSockAddr(const string &ipAddress, int port) {
+sockaddr_in TCPSocket::createSockAddr(const string &ipAddress, int port)
+{
   sockaddr_in address = {};
   address.sin_family = AF_INET;
   address.sin_port = htons(port);
-  if (inet_pton(AF_INET, ipAddress.c_str(), &address.sin_addr) <= 0) {
+  if (inet_pton(AF_INET, ipAddress.c_str(), &address.sin_addr) <= 0)
+  {
     throw std::runtime_error("Invalid IP address format.");
   }
   return address;
 }
 
 bool TCPSocket::send(const string &destinationIP, int32_t destinationPort,
-                     void *data, uint32_t size) {
+                     void *data, uint32_t size)
+{
   auto destAddress = createSockAddr(destinationIP, destinationPort);
   if (sendto(sockfd, data, size, 0, (struct sockaddr *)&destAddress,
-             sizeof(destAddress)) < 0) {
+             sizeof(destAddress)) < 0)
+  {
     return false;
   }
   return true;
 }
 
 void TCPSocket::sendSegment(const Segment &segment, const string &destinationIP,
-                            uint16_t destinationPort) {
+                            uint16_t destinationPort)
+{
   uint32_t segmentSize = segment.payloadSize + 24;
   auto *buffer = new uint8_t[segmentSize];
   encodeSegment(segment, buffer);
@@ -77,7 +91,8 @@ void TCPSocket::sendSegment(const Segment &segment, const string &destinationIP,
   delete[] buffer;
 }
 
-int32_t TCPSocket::receive(void *buffer, uint32_t bufferSize, bool peek) {
+int32_t TCPSocket::receive(void *buffer, uint32_t bufferSize, bool peek)
+{
   sockaddr_in sourceAddress = {};
   socklen_t addressLength = sizeof(sourceAddress);
 
@@ -86,9 +101,12 @@ int32_t TCPSocket::receive(void *buffer, uint32_t bufferSize, bool peek) {
                   (struct sockaddr *)&sourceAddress, &addressLength);
 }
 
-void TCPSocket::produceBuffer() {
-  while (isListening) {
-    try {
+void TCPSocket::produceBuffer()
+{
+  while (isListening)
+  {
+    try
+    {
       uint8_t *dataBuffer = new uint8_t[MAX_SEGMENT_SIZE];
       sockaddr_in clientAddress;
       socklen_t addressLength = sizeof(clientAddress);
@@ -96,7 +114,8 @@ void TCPSocket::produceBuffer() {
       int bytesRead =
           recvfrom(sockfd, dataBuffer, MAX_SEGMENT_SIZE, 0,
                    (struct sockaddr *)&clientAddress, &addressLength);
-      if (bytesRead <= 0) {
+      if (bytesRead <= 0)
+      {
         delete[] dataBuffer;
         if (!isListening)
           break;
@@ -105,14 +124,9 @@ void TCPSocket::produceBuffer() {
 
       Segment segment = decodeSegment(dataBuffer, bytesRead);
       delete[] dataBuffer;
-      // if (segment.checksum == 0) {
-      //   printSegment(segment);
-      // }
-      // cout << "prodBuff: " << endl;
-      // cout << segment.checksum << endl;
-      // cout << calculateChecksum(segment) << endl;
 
-      if (!isValidChecksum(segment)) {
+      if (!isValidChecksum(segment))
+      {
         continue;
       }
 
@@ -124,8 +138,11 @@ void TCPSocket::produceBuffer() {
         packetBuffer.push_back(std::move(message));
         bufferCondition.notify_one();
       }
-    } catch (const std::exception &ex) {
-      if (isListening) {
+    }
+    catch (const std::exception &ex)
+    {
+      if (isListening)
+      {
         std::cerr << "Error in producer: " << ex.what() << "\n";
       }
     }
@@ -134,32 +151,34 @@ void TCPSocket::produceBuffer() {
 
 Message TCPSocket::consumeBuffer(const string &filterIP, uint16_t filterPort,
                                  uint32_t filterSeqNum, uint32_t filterAckNum,
-                                 uint8_t filterFlags, int timeout) {
+                                 uint8_t filterFlags, int timeout)
+{
   auto start = std::chrono::steady_clock::now();
   auto timeoutPoint = (timeout > 0)
                           ? start + std::chrono::seconds(timeout)
                           : std::chrono::steady_clock::time_point::max();
-  while (isListening) {
+  while (isListening)
+  {
     std::unique_lock<mutex> lock(bufferMutex);
     bufferCondition.wait_for(lock, std::chrono::milliseconds(100),
-                             [this]() { return !packetBuffer.empty(); });
-    // cout<<packetBuffer.size()<<endl;
-    for (auto it = packetBuffer.begin(); it != packetBuffer.end(); ++it) {
+                             [this]()
+                             { return !packetBuffer.empty(); });
+    for (auto it = packetBuffer.begin(); it != packetBuffer.end(); ++it)
+    {
       const auto &msg = *it;
       if ((filterIP.empty() || msg.ip == filterIP) &&
           (filterPort == 0 || msg.port == filterPort) &&
           (filterSeqNum == 0 || msg.segment.seqNum == filterSeqNum) &&
           (filterAckNum == 0 || msg.segment.ackNum == filterAckNum) &&
-          (filterFlags == 0 || getFlags8(&msg.segment) == filterFlags)) {
+          (filterFlags == 0 || getFlags8(&msg.segment) == filterFlags))
+      {
         Message result = std::move(*it);
         packetBuffer.erase(it);
-        // updateChecksum(result.segment);
-        // std::cout << "AWODIJAWODIJAWOIDJOAWIJDOAWIJDOIWA" << std::endl;
-        // printSegment(result.segment);
         return result;
       }
     }
-    if (timeout > 0 && std::chrono::steady_clock::now() > timeoutPoint) {
+    if (timeout > 0 && std::chrono::steady_clock::now() > timeoutPoint)
+    {
       throw std::runtime_error("Buffer consumer timeout.");
     }
   }
@@ -171,20 +190,25 @@ void TCPSocket::setStatus(TCPStatusEnum newState) { status = newState; }
 
 TCPStatusEnum TCPSocket::getStatus() const { return status; }
 
-void TCPSocket::startListening() {
+void TCPSocket::startListening()
+{
   isListening = true;
   listenerThread = std::thread(&TCPSocket::produceBuffer, this);
 }
 
-void TCPSocket::stopListening() {
+void TCPSocket::stopListening()
+{
   isListening = false;
-  if (listenerThread.joinable()) {
+  if (listenerThread.joinable())
+  {
     listenerThread.join();
   }
 }
 
-void TCPSocket::close() {
-  if (sockfd >= 0) {
+void TCPSocket::close()
+{
+  if (sockfd >= 0)
+  {
     ::close(sockfd);
     sockfd = -1;
     std::cout << "Socket closed" << std::endl;
@@ -194,50 +218,45 @@ void TCPSocket::close() {
 ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
                                       const string &destIP, uint16_t destPort,
                                       uint32_t startingSeqNum, bool isFile,
-                                      string fileFullName) {
+                                      string fileFullName)
+{
   sh->setDataStream(dataStream, dataSize, startingSeqNum, port, destPort);
-  if (isFile) {
+  if (isFile)
+  {
     sh->addMetadata(fileFullName, port, destPort);
   }
   sh->markEOF();
 
   vector<thread> threads;
   std::atomic<bool> retry(false);
-  while (true) {
+  while (true)
+  {
     while (sh->getCurrentSeqNum() - sh->getCurrentAckNum() <
-           sh->getWindowSize()) {
+           sh->getWindowSize())
+    {
       Segment *seg = sh->advanceWindow(1);
-      if (seg == nullptr) {
+      if (seg == nullptr)
+      {
         break;
       }
-      // printSegment(*seg);
-      // cout << "sendBN: " << endl;
-      // cout << seg->checksum << endl;
-      // cout << calculateChecksum(*seg) << endl;
       threads.emplace_back([this, seg = *seg, destIP, destPort, startingSeqNum,
-                            &retry]() {
+                            &retry]()
+                           {
         try {
           std::cout << OUT << brackets(status_strings[(int)status])
                     << brackets("Seq " +
                                 std::to_string(seg.seqNum - startingSeqNum))
                     << brackets("S=" + std::to_string(seg.seqNum)) << "Sent"
                     << endl;
-          // cout << "Ben" << endl;
-          // Segment temp = seg;
-          // updateChecksum(seg);
-          // cout << temp.checksum << endl;
-          // cout << seg.checksum << endl;
-          // cout << seg.ackNum << endl;
-
           sendSegment(seg, destIP, destPort);
 
           Message result =
               consumeBuffer(destIP, destPort, 0, seg.seqNum + 1, ACK_FLAG, 1);
 
           std::cout << IN
-                    << "[Established] [A=" +
-                           std::to_string(result.segment.ackNum) +
-                           "] Received ACK request from " + result.ip + ":" +
+                    << brackets(status_strings[(int)status])<<brackets("A=" +
+                           std::to_string(result.segment.ackNum))+
+                           "Received ACK request from " + result.ip + ":" +
                            std::to_string(result.port)
                     << std::endl;
           ;
@@ -252,16 +271,19 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
             retry = true;
             sh->goBackWindow();
           }
-        }
-      });
+        } });
     }
-    if (sh->isFinished(startingSeqNum)) {
+    if (sh->isFinished(startingSeqNum))
+    {
       break;
     }
 
-    if (retry) {
-      for (auto &t : threads) {
-        if (t.joinable()) {
+    if (retry)
+    {
+      for (auto &t : threads)
+      {
+        if (t.joinable())
+        {
           t.join();
         }
       }
@@ -269,8 +291,10 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
       retry = false;
     }
   }
-  for (auto &t : threads) {
-    if (t.joinable()) {
+  for (auto &t : threads)
+  {
+    if (t.joinable())
+    {
       t.join();
     }
   }
@@ -281,10 +305,13 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
   return ConnectionResult(true, destIP, destPort, 0, 0);
 }
 
-string TCPSocket::concatenatePayloads(vector<Segment> &segments) {
+string TCPSocket::concatenatePayloads(vector<Segment> &segments)
+{
   string concatenatedData;
-  for (const auto &segment : segments) {
-    if (segment.payload != nullptr && segment.payloadSize > 0) {
+  for (const auto &segment : segments)
+  {
+    if (segment.payload != nullptr && segment.payloadSize > 0)
+    {
       concatenatedData.append(reinterpret_cast<char *>(segment.payload),
                               segment.payloadSize);
     }
@@ -294,28 +321,43 @@ string TCPSocket::concatenatePayloads(vector<Segment> &segments) {
 
 ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer,
                                          string destIP, uint16_t destPort,
-                                         uint32_t seqNum) {
+                                         uint32_t seqNum)
+{
   int i = 0;
-  bool finished = false;
   int limit = 0;
   uint32_t seqNumIt = seqNum;
-  while (limit < 10 && !finished) {
-    try {
-      Message res = consumeBuffer(destIP, destPort);
-      // printSegment(res.segment);
-      // cout << "sendBN: " << endl;
-      // cout << res.segment.checksum << endl;
-      // cout << calculateChecksum(res.segment) << endl;
-      // cout << "Daniel" << endl;
-
-      if (res.segment.seqNum < seqNumIt) {
-        Segment temp = ack(0, res.segment.seqNum + 1);
-        updateChecksum(temp);
-        sendSegment(temp, destIP, destPort);
-
-        // sendSegment(ack(0, res.segment.seqNum + 1), destIP, destPort);
+  std::optional<std::chrono::high_resolution_clock::time_point> start_time;
+  while (limit < 10)
+  {
+    try
+    {
+      bool consumedSucc = true;
+      Message res;
+      try
+      {
+        res = consumeBuffer(destIP, destPort, 0, 0, 0, start_time.has_value() ? 1 : 10);
       }
-      if (res.segment.seqNum == seqNumIt) {
+      catch (const std::exception &e)
+      {
+        consumedSucc = false;
+        if (!start_time.has_value())
+        {
+          throw e;
+        }
+      }
+
+      if (consumedSucc && res.segment.seqNum < seqNumIt)
+      {
+        if (res.segment.flags.fin != 1)
+        {
+          Segment ackSegment = ack(0, res.segment.seqNum + 1);
+          updateChecksum(ackSegment);
+          sendSegment(ackSegment, destIP, destPort);
+          start_time = std::chrono::high_resolution_clock::now();
+        }
+      }
+      if (res.segment.seqNum == seqNumIt)
+      {
         i++;
         resBuffer.push_back(res.segment);
         std::cout << IN << brackets(status_strings[(int)status])
@@ -323,26 +365,46 @@ ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer,
                   << brackets("S=" + std::to_string(res.segment.seqNum))
                   << "ACKed" << endl;
         seqNumIt++;
-        Segment temp = ack(0, seqNumIt);
-        updateChecksum(temp);
-        sendSegment(temp, destIP, destPort);
+        Segment ackSegment = ack(0, seqNumIt);
+        updateChecksum(ackSegment);
+        sendSegment(ackSegment, destIP, destPort);
 
-        // sendSegment(ack(0, seqNumIt), destIP, destPort);
         std::cout << OUT << brackets(status_strings[(int)status])
                   << brackets("Seq " + std::to_string(i))
                   << brackets("A=" + std::to_string(seqNumIt)) << "Sent"
                   << endl;
 
-        if (res.segment.flags.psh == 1) {
-          cout << "Daniel" << endl;
-          cout << "Waiting" << endl;
-          std::this_thread::sleep_for(std::chrono::seconds(5));
+        if (res.segment.flags.psh == 1)
+        {
+          if (!start_time.has_value())
+          {
+            // Start waiting for server's segments that hasnt been acked at server side
+            start_time = std::chrono::high_resolution_clock::now();
+            cout << OUT << " Start waiting for Segments who Server not yet received the ACK and send the corresponding ACK." << endl;
+            continue;
+          }
+          else
+          {
+            return ConnectionResult(true, destIP, destPort, seqNum, 0);
+          }
+        }
+      }
+
+      if (start_time.has_value())
+      {
+        auto current_time = std::chrono::high_resolution_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - *start_time);
+        if (elapsed.count() > 3)
+        {
+          // Consider finished in client's side meanwhile server's side hasn't
           return ConnectionResult(true, destIP, destPort, seqNum, 0);
         }
       }
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
       limit++;
-      commandLine('!', "[ERROR] [Established] " + std::string(e.what()));
+      commandLine('!', "[ERROR] " + brackets(status_strings[(int)status]) + std::string(e.what()));
     }
   }
   return ConnectionResult(false, destIP, destPort, seqNum, 0);
