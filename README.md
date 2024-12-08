@@ -2,7 +2,7 @@
   <img src="https://anime-hanabi.com/wp-content/uploads/2023/02/trap3.png?w=636" alt="hero">
 </p>
 
-# 🛜 Custom UDP Communication Protocol Implementation
+# 🛜 Custom TCP over UDP Communication Protocol Implementation
 > Project 1 IF2230 Computer Networks
 ## 💫 Overview
 
