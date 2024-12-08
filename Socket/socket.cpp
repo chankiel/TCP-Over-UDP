@@ -125,6 +125,16 @@ void TCPSocket::produceBuffer()
       Segment segment = decodeSegment(dataBuffer, bytesRead);
       delete[] dataBuffer;
 
+      printSegment(segment);
+      cout << "prodBuff: " << endl;
+      cout << segment.checksum << endl;
+      cout << calculateChecksum(segment) << endl;
+
+      if (!isValidChecksum(segment))
+      {
+        continue;
+      }
+
       Message message(inet_ntoa(clientAddress.sin_addr),
                       ntohs(clientAddress.sin_port), segment);
 
@@ -170,6 +180,10 @@ Message TCPSocket::consumeBuffer(const string &filterIP, uint16_t filterPort,
       {
         Message result = std::move(*it);
         packetBuffer.erase(it);
+        // updateChecksum(result.segment);
+        std::cout
+            << "AWODIJAWODIJAWOIDJOAWIJDOAWIJDOIWA" << std::endl;
+        printSegment(result.segment);
         return result;
       }
     }
@@ -234,6 +248,10 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
       {
         break;
       }
+      printSegment(*seg);
+      cout << "sendBN: " << endl;
+      cout << seg->checksum << endl;
+      cout << calculateChecksum(*seg) << endl;
       threads.emplace_back([this, seg = *seg, destIP, destPort, startingSeqNum,
                             &retry]()
                            {
@@ -244,8 +262,12 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
                     << brackets("S=" + std::to_string(seg.seqNum)) << "Sent"
                     << endl;
           sendSegment(seg, destIP, destPort);
+          
+          std::cout << "----------------------------------------1" << std::endl;
           Message result =
               consumeBuffer(destIP, destPort, 0, seg.seqNum + 1, ACK_FLAG, 1);
+          std::cout << "----------------------------------------2" << std::endl;
+
           std::cout<< IN<<"[Established] [A=" + std::to_string(result.segment.ackNum) +
                     "] Received ACK request from " + result.ip + ":" +
                     std::to_string(result.port)<<std::endl;;
@@ -319,6 +341,10 @@ ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer, string dest
     try
     {
       Message res = consumeBuffer(destIP, destPort);
+      printSegment(res.segment);
+      cout << "sendBN: " << endl;
+      cout << res.segment.checksum << endl;
+      cout << calculateChecksum(res.segment) << endl;
       if (res.segment.seqNum < seqNumIt)
       {
         sendSegment(ack(0, res.segment.seqNum + 1), destIP, destPort);

@@ -70,6 +70,8 @@ ConnectionResult Client::respondFin(string dest_ip, uint16_t dest_port,
   // Send ACK
   Segment ackSeg = ack(seqNum + 1, rec_fin.segment.seqNum + 1);
   updateChecksum(ackSeg);
+  std::cout << "AWODIJAWODIJAWOIDJOAWIJDOAWIJDOIWA" << std::endl;
+  printSegment(ackSeg);
 
   connection->sendSegment(ackSeg, dest_ip, dest_port);
   commandLine('i', "[Closing] [S=" + to_string(ackSeg.seqNum) +
@@ -146,6 +148,7 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
       uint32_t ackNum = result.segment.seqNum + 1;
       Segment ackSegment = ack(r_seq_num + 1, ackNum);
       updateChecksum(ackSegment);
+
       // ackSegment.checksum = calculateChecksum(ackSegment);
       connection->sendSegment(ackSegment, dest_ip, dest_port);
       commandLine('i', "[Handshake] [S=" + std::to_string(ackSegment.seqNum) +
@@ -190,10 +193,10 @@ void Client::run()
         {
           if (res.back().flags.ece == 1)
           {
-            std::string filename(reinterpret_cast<char*>(res.back().payload), res.back().payloadSize);
+            std::string filename(reinterpret_cast<char *>(res.back().payload), res.back().payloadSize);
             res.pop_back();
             string result = connection->concatenatePayloads(res);
-            convertFromStrToFile(filename,result);
+            convertFromStrToFile(filename, result);
           }
           else
           {

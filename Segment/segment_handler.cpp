@@ -43,6 +43,10 @@ void SegmentHandler::generateSegments(uint32_t startingSeqNum,
     seg.destPort = destPort;
 
     iterator += payloadSize;
+    // while (seg.checksum == 0)
+    // {
+    updateChecksum(seg);
+    // }
   }
 
   dataIndex = numSegments - 1;
@@ -119,7 +123,7 @@ void SegmentHandler::addMetadata(string fileFullName, uint16_t sourcePort, uint1
   Segment seg = createSegment(fileFullName, sourcePort, destPort);
   seg.payloadSize = static_cast<uint16_t>(fileFullName.length());
   seg.window = windowSize;
-  seg.seqNum = segmentBuffer.back().seqNum+1;
+  seg.seqNum = segmentBuffer.back().seqNum + 1;
   seg.flags.ece = 1;
   segmentBuffer.push_back(seg);
 }
