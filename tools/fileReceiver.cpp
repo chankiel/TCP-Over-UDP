@@ -49,13 +49,13 @@ void convertFromStrToFile(const std::string &outputFile, const std::string &cont
   std::ofstream output(outputFile);
   if (!output)
   {
-    std::cerr << "Error: Unable to open output file: " << outputFile << std::endl;
+    std::cerr << ERROR<<" Unable to open output file: " << outputFile << std::endl;
     return;
   }
 
   output << content;
 
-  std::cout << "Client content successfully written to the file: " << outputFile << std::endl;
+  std::cout <<OUT<< " Client content successfully written to the file: " << outputFile << std::endl;
 
   output.close();
 }

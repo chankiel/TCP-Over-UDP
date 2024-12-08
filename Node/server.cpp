@@ -3,19 +3,16 @@
 #include <stdexcept>
 #include <string>
 
-int SERVER_BROADCAST_TIMEOUT = 12; // temporary
+int SERVER_BROADCAST_TIMEOUT = 10; // temporary
 int SERVER_COMMON_TIMEOUT = 12;    // temporary
 int SERVER_MAX_TRY = 10;
 
 ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port)
 {
-  int retries = SERVER_MAX_TRY;
-  while (retries-- > 0)
+  for(int i=0;i<SERVER_MAX_TRY;i++)
   {
     try
     {
-
-      // Get all the possible buffer
       Message sync_message =
           connection->consumeBuffer("", 0, 0, 0, SYN_FLAG, 10);
       connection->setStatus(TCPStatusEnum::SYN_RECEIVED);
@@ -41,7 +38,6 @@ ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port)
                    std::to_string(destPort));
       Segment synSeg = synAck(sequence_num_second, ack_num_second);
       updateChecksum(synSeg);
-      // synSeg.checksum = calculateChecksum(synSeg);
       connection->sendSegment(synSeg, dest_ip, dest_port);
       connection->setStatus(TCPStatusEnum::SYN_SENT);
 
@@ -68,31 +64,21 @@ ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port)
     }
     catch (const std::exception &e)
     {
-      commandLine(
-          '!', "[ERROR] [" +
-                   status_strings[static_cast<int>(connection->getStatus())] +
-                   "] " + std::string(e.what()));
+      cout << ERROR << brackets("TIMEOUT") + "Restarting Handshake" + brackets("ATTEMPT-" + std::to_string(i + 1))<<std::endl;
     }
   }
-
-  commandLine(
-      '!',
-      "[ERROR] [" + status_strings[static_cast<int>(connection->getStatus())] +
-          "] Handshake failed after " + std::to_string(retries) + " retries");
   return ConnectionResult(false, dest_ip, dest_port, 0, 0);
 }
 
 ConnectionResult Server::listenBroadcast()
 {
-  for (int i = 0; i < SERVER_MAX_TRY; i++)
-  {
+  std::cout<<std::endl;
+  commandLine('i', "Listening to the broadcast port for clients.");
     try
     {
       Message answer =
           connection->consumeBuffer("", 0, 0, 0, 0, SERVER_BROADCAST_TIMEOUT);
       connection->setStatus(TCPStatusEnum::LISTENING);
-      std::cout << answer.ip << std::endl;
-      commandLine('+', "Received Broadcast Message\n");
       commandLine('+', "Received Broadcast Message");
       Segment temp = accBroad();
       updateChecksum(temp);
@@ -102,22 +88,19 @@ ConnectionResult Server::listenBroadcast()
     }
     catch (const std::runtime_error &e)
     {
-      commandLine('x', "Timeout " + std::to_string(i + 1));
-      continue;
+      return ConnectionResult(false, "", 0, 0, 0);
     }
   }
-  return ConnectionResult(false, 0, 0, 0, 0);
-}
 
 ConnectionResult Server::startFin(string dest_ip, uint16_t dest_port,
                                   uint32_t seqNum, uint32_t ackNum)
 {
-  uint32_t finSeqNum;
   for (int i = 0; i < SERVER_MAX_TRY; i++)
   {
     try
     {
       // Send Fin
+      connection->setStatus(TCPStatusEnum::CLOSE_WAIT);
       Segment finSeg = fin(seqNum + 1, ackNum);
       updateChecksum(finSeg);
       connection->sendSegment(finSeg, dest_ip, dest_port);
@@ -126,7 +109,6 @@ ConnectionResult Server::startFin(string dest_ip, uint16_t dest_port,
                    "] [S=" + to_string(finSeg.seqNum) + "] [A=" +
                    to_string(finSeg.ackNum) + "] Sending FIN request to " +
                    dest_ip + ":" + to_string(dest_port));
-      finSeqNum = finSeg.seqNum;
       // REC ACK
       Message answer_fin =
           connection->consumeBuffer(dest_ip, dest_port, 0, finSeg.seqNum + 1,
@@ -137,22 +119,10 @@ ConnectionResult Server::startFin(string dest_ip, uint16_t dest_port,
                    "] [A=" + to_string(answer_fin.segment.ackNum) +
                    "] Received ACK request from  " + dest_ip +
                    to_string(dest_port));
-      break;
-    }
-    catch (const std::runtime_error &e)
-    {
-      commandLine('x', "Timeout " + std::to_string(i + 1));
-      continue;
-    }
-  }
-
-  for (int i = 0; i < SERVER_MAX_TRY; i++)
-  {
-    try
-    {
       // REC FIN
+      connection->setStatus(TCPStatusEnum::LAST_ACK);
       Message fin2 =
-          connection->consumeBuffer(dest_ip, dest_port, 0, finSeqNum + 1,
+          connection->consumeBuffer(dest_ip, dest_port, 0, finSeg.seqNum + 1,
                                     FIN_FLAG, SERVER_COMMON_TIMEOUT);
       commandLine(
           '+', "[" + status_strings[static_cast<int>(connection->getStatus())] +
@@ -162,6 +132,7 @@ ConnectionResult Server::startFin(string dest_ip, uint16_t dest_port,
                    to_string(dest_port));
 
       // Send ACK
+      connection->setStatus(TCPStatusEnum::CLOSED);
       Segment ackSeg = ack(seqNum + 2, fin2.segment.seqNum + 1);
       updateChecksum(ackSeg);
       connection->sendSegment(ackSeg, dest_ip, dest_port);
@@ -177,7 +148,7 @@ ConnectionResult Server::startFin(string dest_ip, uint16_t dest_port,
     }
     catch (const std::runtime_error &e)
     {
-      commandLine('x', "Timeout " + std::to_string(i + 1));
+      cout<< ERROR<< brackets("TIMEOUT") + "No respond for FIN request. Restarting sending for FIN to Client"+ brackets("ATTEMPT-"+std::to_string(i + 1))<<std::endl;
       continue;
     }
   }
@@ -191,17 +162,18 @@ void Server::run()
 
   while (true)
   {
+    connection->setStatus(TCPStatusEnum::LISTENING);
     ConnectionResult statusBroadcast = listenBroadcast();
     if (!statusBroadcast.success)
     {
-      std::cerr << "Error: Failed to receive broadcast." << std::endl;
+      std::cerr << ERROR<<" Failed to receive broadcast. Restarting Server." << std::endl;
       continue;
     }
 
     ConnectionResult statusHandshake = respondHandshake(statusBroadcast.ip, statusBroadcast.port);
     if (!statusHandshake.success)
     {
-      std::cerr << "Error: Handshake response failed." << std::endl;
+      std::cerr << ERROR<<" Handshake response failed. Restarting Server." << std::endl;
       continue;
     }
 
@@ -226,9 +198,11 @@ void Server::run()
         fileFullName);
     if (!statusSend.success)
     {
-      std::cerr << "Error: Sending data failed." << std::endl;
+      std::cerr << ERROR<<" Sending data failed. Restarting Server." << std::endl;
       continue;
     }
+    cout << OUT << " Start waiting for Client if Server finished first." << endl;
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 
     ConnectionResult statusFin = startFin(
         statusBroadcast.ip,
@@ -237,7 +211,7 @@ void Server::run()
         statusHandshake.ackNum);
     if (!statusFin.success)
     {
-      std::cerr << "Error: FIN process failed." << std::endl;
+      std::cerr << ERROR<<" FIN process failed. Restarting Server." << std::endl;
     }
   }
 }

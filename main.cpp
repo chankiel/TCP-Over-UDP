@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
   commandLine('?', "Please chose the operating mode");
   commandLine('?', "1. Sender (Server)");
   commandLine('?', "2. Receiver (Client)");
-  commandLine('?', "Input: ");
+  std::cout << INPUT << " Input: ";
 
   int operating_mode_choice;
   std::cin >> operating_mode_choice;
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
     commandLine('?', "Please choose the sending mode");
     commandLine('?', "1. User input");
     commandLine('?', "2. File input");
-    commandLine('?', "Input: ");
+    std::cout << INPUT << " Input: ";
 
     int sending_mode_choice;
     std::cin >> sending_mode_choice;
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
     }
     else if (sending_mode_choice == 2)
     {
-      commandLine('?', "File mode chosen, please enter the file path: ");
+      cout<<INPUT<<" File mode chosen, please enter the file path: ";
       std::string filePath;
       std::cin.ignore();
       std::getline(std::cin, filePath);
@@ -111,22 +111,7 @@ int main(int argc, char *argv[])
       {
         commandLine('+', "File has been successfully read.");
         convertToFileContentAndSetItem(
-            transformedFilePath, server); // udah include setItem di server
-
-        // INI KALAU MAU DI SERVER MINTA NAMA FILE DAN EXTENSION
-
-        // commandLine('?', "Please enter the desired file name (without
-        // extension): "); std::string fileName; std::cin.ignore();
-        // std::getline(std::cin, fileName);
-
-        // commandLine('?', "Please enter the desired file extension: ");
-        // std::string fileExtension;
-        // std::cin.ignore();
-        // std::getline(std::cin, fileExtension);
-
-        // INI KALAU MAU DI SERVER AUTO DAPAT NAMAFILE DAN EXTENSION - SEKARANG
-        // ASUMSI INI DLU.
-
+            transformedFilePath, server);
         std::filesystem::path filePathObj(transformedFilePath);
         std::string fileName = filePathObj.stem().string();
         std::string fileExtension = filePathObj.extension().string();
@@ -135,20 +120,8 @@ int main(int argc, char *argv[])
         {
           fileExtension.erase(0, 1);
         }
-
-        // ----------------
-
         server.setFileName(fileName);
         server.setFileEx(fileExtension);
-
-        // BINARY CONVERSION TESTING
-        // std::cout << server.getItem() << std::endl;
-        // std::cout << stringToBinary(server.getItem()) << std::endl;
-        // std::cout << binaryToString(stringToBinary(server.getItem())) << endl;
-
-        // SERVER HERE ONLY FOR TESTING PURPOSES
-        // std::string fullFileName = fileName + "." + fileExtension;
-        // convertFromServerToFile(fullFileName, server);
       }
       else
       {
@@ -161,14 +134,12 @@ int main(int argc, char *argv[])
       throw std::runtime_error("Invalid sending mode choice");
     }
 
-    commandLine('i', "Listening to the broadcast port for clients.");
-
     server.run();
   }
   else if (operating_mode_choice == 2)
   {
     commandLine('+', "Node is now a receiver");
-    commandLine('?', "Input the server program's port: ");
+  std::cout<<INPUT<<" Input the server program's port: ";
 
     int serverPort;
     std::cin >> serverPort;
@@ -177,25 +148,7 @@ int main(int argc, char *argv[])
                          std::to_string(serverPort));
 
     Client client(ip, port, serverPort);
-
-    // UTK SEKARANG MINTA DULU JUST IN CASE
-    // commandLine('?',
-    //             "Please enter the desired file name (without extension): ");
-    // std::string requestedFileName;
-    // std::cin.ignore();
-    // std::getline(std::cin, requestedFileName);
-
-    // commandLine('?', "Please enter the desired file extension: ");
-    // std::string requestedFileExtension;
-    // std::cin.ignore();
-    // std::getline(std::cin, requestedFileExtension);
-
-    // client.setFileName(requestedFileName);
-    // client.setFileEx(requestedFileExtension);
-
     client.run();
-
-    // convertFromClientToFile(fullFileName, client);
   }
   else
   {

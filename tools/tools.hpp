@@ -12,6 +12,7 @@ const std::string INPUT = "[?]";
 const std::string IN = "[i]";
 const std::string OUT = "[+]";
 const std::string WAIT = "[~]";
+const std::string ERROR = "[X]";
 
 bool isNumber(const std::string &str);
 

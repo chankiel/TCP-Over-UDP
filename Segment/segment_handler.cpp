@@ -46,8 +46,6 @@ void SegmentHandler::generateSegments(uint32_t startingSeqNum,
   }
 
   dataIndex = numSegments - 1;
-
-  cout << "NumSegments: " << numSegments << endl;
 }
 
 void SegmentHandler::setDataStream(uint8_t *dataStream, uint32_t dataSize,
