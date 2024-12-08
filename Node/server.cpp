@@ -168,30 +168,56 @@ void Server::run()
 {
   connection->listen();
   connection->startListening();
-  while(true){
+
+  while (true)
+  {
     ConnectionResult statusBroadcast = listenBroadcast();
-    if (statusBroadcast.success)
+    if (!statusBroadcast.success)
     {
-      ConnectionResult statusHandshake =
-          respondHandshake(statusBroadcast.ip, statusBroadcast.port);
-      if (statusHandshake.success)
-      {
-        bool isFile = true;
-        string fileFullName;
-        if(fileEx == "-1"){
-          isFile = false;
-        }else{
-          fileFullName = fileEx=="" ? fileName : fileName+"."+fileEx;
-        }
-        ConnectionResult statusSend = connection->sendBackN(
-            (uint8_t *)item.data(), static_cast<uint32_t>(item.length()),
-            statusBroadcast.ip, statusBroadcast.port, statusHandshake.ackNum,isFile,fileFullName);
-        if (statusSend.success)
-        {
-          ConnectionResult statusFin = startFin(statusBroadcast.ip, statusBroadcast.port,
-                                                statusHandshake.seqNum, statusHandshake.ackNum);
-        }
-      }
+      std::cerr << "Error: Failed to receive broadcast." << std::endl;
+      continue;
+    }
+
+    ConnectionResult statusHandshake = respondHandshake(statusBroadcast.ip, statusBroadcast.port);
+    if (!statusHandshake.success)
+    {
+      std::cerr << "Error: Handshake response failed." << std::endl;
+      continue;
+    }
+
+    bool isFile = true;
+    std::string fileFullName;
+    if (fileEx == "-1")
+    {
+      isFile = false;
+    }
+    else
+    {
+      fileFullName = fileEx.empty() ? fileName : fileName + "." + fileEx;
+    }
+
+    ConnectionResult statusSend = connection->sendBackN(
+        reinterpret_cast<uint8_t *>(item.data()),
+        static_cast<uint32_t>(item.length()),
+        statusBroadcast.ip,
+        statusBroadcast.port,
+        statusHandshake.ackNum,
+        isFile,
+        fileFullName);
+    if (!statusSend.success)
+    {
+      std::cerr << "Error: Sending data failed." << std::endl;
+      continue;
+    }
+
+    ConnectionResult statusFin = startFin(
+        statusBroadcast.ip,
+        statusBroadcast.port,
+        statusHandshake.seqNum,
+        statusHandshake.ackNum);
+    if (!statusFin.success)
+    {
+      std::cerr << "Error: FIN process failed." << std::endl;
     }
   }
 }

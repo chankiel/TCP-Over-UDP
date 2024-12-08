@@ -171,38 +171,48 @@ void Client::run()
 {
   connection->listen();
   connection->startListening();
-  ConnectionResult statusBroadcast =
-      findBroadcast("255.255.255.255", serverPort);
-  if (statusBroadcast.success)
+
+  ConnectionResult statusBroadcast = findBroadcast("255.255.255.255", serverPort);
+  if (!statusBroadcast.success)
   {
-    ConnectionResult statusHandshake =
-        startHandshake(statusBroadcast.ip, statusBroadcast.port);
-    if (statusHandshake.success)
-    {
-      vector<Segment> res;
-      ConnectionResult statusReceive = connection->receiveBackN(res, statusBroadcast.ip, statusBroadcast.port,
-                                                                statusHandshake.seqNum + 1);
-      if (statusReceive.success)
-      {
-        ConnectionResult statusFin =
-            respondFin(statusBroadcast.ip, statusBroadcast.port, statusHandshake.seqNum,
-                       statusHandshake.ackNum);
-        if (statusFin.success)
-        {
-          if (res.back().flags.ece == 1)
-          {
-            std::string filename(reinterpret_cast<char *>(res.back().payload), res.back().payloadSize);
-            res.pop_back();
-            string result = connection->concatenatePayloads(res);
-            convertFromStrToFile(filename, result);
-          }
-          else
-          {
-            string result = connection->concatenatePayloads(res);
-            std::cout << "Result string: " << result << std::endl;
-          }
-        }
-      }
-    }
+    std::cerr << "Error: Broadcast failed." << std::endl;
+    return;
+  }
+
+  ConnectionResult statusHandshake = startHandshake(statusBroadcast.ip, statusBroadcast.port);
+  if (!statusHandshake.success)
+  {
+    std::cerr << "Error: Handshake failed." << std::endl;
+    return;
+  }
+
+  vector<Segment> res;
+  ConnectionResult statusReceive = connection->receiveBackN(
+      res, statusBroadcast.ip, statusBroadcast.port, statusHandshake.seqNum + 1);
+  if (!statusReceive.success)
+  {
+    std::cerr << "Error: Receiving response failed." << std::endl;
+    return;
+  }
+
+  ConnectionResult statusFin = respondFin(
+      statusBroadcast.ip, statusBroadcast.port, statusHandshake.seqNum, statusHandshake.ackNum);
+  if (!statusFin.success)
+  {
+    std::cerr << "Error: FIN response failed." << std::endl;
+    return;
+  }
+
+  if (res.back().flags.ece == 1)
+  {
+    std::string filename(reinterpret_cast<char *>(res.back().payload), res.back().payloadSize);
+    res.pop_back();
+    std::string result = connection->concatenatePayloads(res);
+    convertFromStrToFile(filename, result);
+  }
+  else
+  {
+    std::string result = connection->concatenatePayloads(res);
+    std::cout << "Result string: " << result << std::endl;
   }
 }
