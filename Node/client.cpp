@@ -79,7 +79,7 @@ ConnectionResult Client::respondFin(string dest_ip, uint16_t dest_port,
                    "] [S=" + to_string(ackSeg.seqNum) + "] [A=" +
                    to_string(ackSeg.ackNum) + "] Send ACK request from  " +
                    dest_ip + to_string(dest_port));
-
+      break;
     } catch (const std::runtime_error &e) {
       commandLine('x', "Timeout " + std::to_string(i + 1));
     }
