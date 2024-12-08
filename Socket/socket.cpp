@@ -130,10 +130,10 @@ void TCPSocket::produceBuffer()
       cout << segment.checksum << endl;
       cout << calculateChecksum(segment) << endl;
 
-      if (!isValidChecksum(segment))
-      {
-        continue;
-      }
+      // if (!isValidChecksum(segment))
+      // {
+      //   continue;
+      // }
 
       Message message(inet_ntoa(clientAddress.sin_addr),
                       ntohs(clientAddress.sin_port), segment);
@@ -263,10 +263,8 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
                     << endl;
           sendSegment(seg, destIP, destPort);
           
-          std::cout << "----------------------------------------1" << std::endl;
           Message result =
               consumeBuffer(destIP, destPort, 0, seg.seqNum + 1, ACK_FLAG, 1);
-          std::cout << "----------------------------------------2" << std::endl;
 
           std::cout<< IN<<"[Established] [A=" + std::to_string(result.segment.ackNum) +
                     "] Received ACK request from " + result.ip + ":" +

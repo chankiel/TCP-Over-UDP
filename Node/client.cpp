@@ -70,8 +70,6 @@ ConnectionResult Client::respondFin(string dest_ip, uint16_t dest_port,
   // Send ACK
   Segment ackSeg = ack(seqNum + 1, rec_fin.segment.seqNum + 1);
   updateChecksum(ackSeg);
-  std::cout << "AWODIJAWODIJAWOIDJOAWIJDOAWIJDOIWA" << std::endl;
-  printSegment(ackSeg);
 
   connection->sendSegment(ackSeg, dest_ip, dest_port);
   commandLine('i', "[Closing] [S=" + to_string(ackSeg.seqNum) +
