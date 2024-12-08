@@ -176,9 +176,16 @@ void Server::run()
           respondHandshake(statusBroadcast.ip, statusBroadcast.port);
       if (statusHandshake.success)
       {
+        bool isFile = true;
+        string fileFullName;
+        if(fileEx == "-1"){
+          isFile = false;
+        }else{
+          fileFullName = fileEx=="" ? fileName : fileName+"."+fileEx;
+        }
         ConnectionResult statusSend = connection->sendBackN(
-            (uint8_t *)item.data(), static_cast<uint16_t>(item.length()),
-            statusBroadcast.ip, statusBroadcast.port, statusHandshake.ackNum);
+            (uint8_t *)item.data(), static_cast<uint32_t>(item.length()),
+            statusBroadcast.ip, statusBroadcast.port, statusHandshake.ackNum,isFile,fileFullName);
         if (statusSend.success)
         {
           ConnectionResult statusFin = startFin(statusBroadcast.ip, statusBroadcast.port,

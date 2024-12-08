@@ -6,6 +6,8 @@
 #include <random>
 #include <stdexcept>
 #include <string>
+#include "../tools/fileReceiver.hpp"
+
 int CLIENT_BROADCAST_TIMEOUT = 12; // temporary
 int CLIENT_COMMON_TIMEOUT = 12;    // temporary
 int CLIENT_MAX_TRY = 10;
@@ -186,8 +188,18 @@ void Client::run()
                        statusHandshake.ackNum);
         if (statusFin.success)
         {
-          string result = connection->concatenatePayloads(res);
-          std::cout << "Result string: " << result << std::endl;
+          if (res.back().flags.ece == 1)
+          {
+            std::string filename(reinterpret_cast<char*>(res.back().payload), res.back().payloadSize);
+            res.pop_back();
+            string result = connection->concatenatePayloads(res);
+            convertFromStrToFile(filename,result);
+          }
+          else
+          {
+            string result = connection->concatenatePayloads(res);
+            std::cout << "Result string: " << result << std::endl;
+          }
         }
       }
     }

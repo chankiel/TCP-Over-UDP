@@ -9,6 +9,5 @@
 void convertFromBinary(const std::string &binaryFile,
                        const std::string &outputFile);
 
-void convertFromClientToFile(const std::string &outputFile, Client &client);
-void convertFromServerToFile(const std::string &outputFile, Server &server); // TESTING PURPOSES
+void convertFromStrToFile(const std::string &outputFile, const std::string &content);
 #endif

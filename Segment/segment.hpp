@@ -10,19 +10,22 @@
 #include <vector>
 using namespace std;
 
-struct Segment {
+struct Segment
+{
   uint16_t sourcePort;
   uint16_t destPort;
   uint32_t seqNum;
   uint32_t ackNum;
   // todo continue
 
-  struct {
+  struct
+  {
     unsigned int data_offset : 4;
     unsigned int reserved : 4;
   };
 
-  struct {
+  struct
+  {
     unsigned int cwr : 1;
     unsigned int ece : 1;
     unsigned int urg : 1;
@@ -36,11 +39,12 @@ struct Segment {
   uint16_t window;
   uint16_t checksum;
   uint16_t urgPointer;
-  uint32_t payloadSize; 
+  uint32_t payloadSize;
   uint8_t *payload;
   Segment()
       : sourcePort(0), destPort(0), seqNum(0), ackNum(0), window(0),
-        checksum(0), urgPointer(0), payloadSize(0), payload(nullptr) {
+        checksum(0), urgPointer(0), payloadSize(0), payload(nullptr)
+  {
     data_offset = 6;
     reserved = 0;
     memset(&flags, 0, sizeof(flags));
@@ -50,15 +54,24 @@ struct Segment {
       : sourcePort(other.sourcePort), destPort(other.destPort),
         seqNum(other.seqNum), ackNum(other.ackNum), window(other.window),
         checksum(other.checksum), urgPointer(other.urgPointer),
-        payloadSize(other.payloadSize), payload(nullptr) {
-    if (other.payload != nullptr && other.payloadSize > 0) {
+        payloadSize(other.payloadSize), payload(nullptr)
+  {
+    if (other.payload != nullptr && other.payloadSize > 0)
+    {
       payload = new uint8_t[other.payloadSize];
       std::copy(other.payload, other.payload + other.payloadSize, payload);
     }
 
     data_offset = other.data_offset;
     reserved = other.reserved;
-    flags = other.flags;
+    flags.cwr = other.flags.cwr;
+    flags.ece = other.flags.ece;
+    flags.urg = other.flags.urg;
+    flags.ack = other.flags.ack;
+    flags.psh = other.flags.psh;
+    flags.rst = other.flags.rst;
+    flags.syn = other.flags.syn;
+    flags.fin = other.flags.fin;
   }
 } __attribute__((packed));
 
@@ -70,7 +83,7 @@ const uint8_t FIN_ACK_FLAG = FIN_FLAG | ACK_FLAG;
 
 // Payload size di options 32 bit
 const uint32_t HEADER_SIZE = 24;
-const uint32_t MAX_PAYLOAD_SIZE = 3;
+const uint32_t MAX_PAYLOAD_SIZE = 1476;
 const uint32_t MAX_SEGMENT_SIZE = HEADER_SIZE + MAX_PAYLOAD_SIZE; // MTU: 1500
 
 /**

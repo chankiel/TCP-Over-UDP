@@ -44,8 +44,7 @@ void convertFromBinary(const std::string &binaryFile, const std::string &outputF
   outFile.close();
 }
 
-// Ini dipake stelah client dapat stringnya yg disimpan di atribut item
-void convertFromClientToFile(const std::string &outputFile, Client &client)
+void convertFromStrToFile(const std::string &outputFile, const std::string &content)
 {
   std::ofstream output(outputFile);
   if (!output)
@@ -54,30 +53,9 @@ void convertFromClientToFile(const std::string &outputFile, Client &client)
     return;
   }
 
-  std::string clientItem = client.getItem();
-
-  output << clientItem;
+  output << content;
 
   std::cout << "Client content successfully written to the file: " << outputFile << std::endl;
-
-  output.close();
-}
-
-// FOR TESTING PURPOSES
-void convertFromServerToFile(const std::string &outputFile, Server &server)
-{
-  std::ofstream output(outputFile);
-  if (!output)
-  {
-    std::cerr << "Error: Unable to open output file: " << outputFile << std::endl;
-    return;
-  }
-
-  std::string serverItem = server.getItem();
-
-  output << serverItem;
-
-  std::cout << "Server content successfully written to the file: " << outputFile << std::endl;
 
   output.close();
 }

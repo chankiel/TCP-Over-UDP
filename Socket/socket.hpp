@@ -85,7 +85,7 @@ public:
                         uint8_t filterFlags = 0, int timeout = 10);
 
   ConnectionResult sendBackN(uint8_t *dataStream, uint32_t dataSize,
-                 const string &destIP, uint16_t destPort, uint32_t startingSeqNum);
+                 const string &destIP, uint16_t destPort, uint32_t startingSeqNum, bool isFile, string fileFullName);
   string concatenatePayloads(vector<Segment> &segments);
   ConnectionResult receiveBackN(vector<Segment> &resBuffer, string dest_ip, uint16_t dest_port, uint32_t seqNum);
 

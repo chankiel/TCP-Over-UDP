@@ -213,9 +213,15 @@ void TCPSocket::close()
 
 ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
                                       const string &destIP, uint16_t destPort,
-                                      uint32_t startingSeqNum)
+                                      uint32_t startingSeqNum, bool isFile, string fileFullName)
 {
   sh->setDataStream(dataStream, dataSize, startingSeqNum, port, destPort);
+  if (isFile)
+  {
+    sh->addMetadata(fileFullName, port, destPort);
+  }
+  sh->markEOF();
+
   vector<thread> threads;
   std::atomic<bool> retry(false);
   while (true)
@@ -232,7 +238,6 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
                             &retry]()
                            {
         try {
-          cout<<endl;
           std::cout << OUT << brackets(status_strings[(int)status])
                     << brackets("Seq " +
                                 std::to_string(seg.seqNum - startingSeqNum))
@@ -241,10 +246,9 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
           sendSegment(seg, destIP, destPort);
           Message result =
               consumeBuffer(destIP, destPort, 0, seg.seqNum + 1, ACK_FLAG, 1);
-          commandLine(
-              'i', "[Established] [A=" + std::to_string(result.segment.ackNum) +
-                       "] Received ACK request from " + result.ip + ":" +
-                       std::to_string(result.port));
+          std::cout<< IN<<"[Established] [A=" + std::to_string(result.segment.ackNum) +
+                    "] Received ACK request from " + result.ip + ":" +
+                    std::to_string(result.port)<<std::endl;;
           sh->ackWindow(seg.seqNum);
         } catch (const std::runtime_error &e) {
           std::cout << OUT << brackets("TIMEOUT")
@@ -260,7 +264,6 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
     }
     if (sh->isFinished(startingSeqNum))
     {
-      cout << "PEPEK" << endl;
       break;
     }
 
@@ -288,7 +291,6 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
 
   std::cout << OUT << brackets(status_strings[(int)status])
             << "All segments sent to " << destIP << ":" << destPort << endl;
-  // cout<<"Ack Num: "<<sh->getCurrentAckNum()<<", Seq Num: "<<sh->getCurrentSeqNum()<<", EndOfBuffer: "<<endOfSegBuffer<<endl;
   return ConnectionResult(true, destIP, destPort, 0, 0);
 }
 
@@ -336,7 +338,7 @@ ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer, string dest
                   << brackets("A=" + std::to_string(seqNumIt)) << "Sent"
                   << endl;
 
-        if (res.segment.flags.ece == 1)
+        if (res.segment.flags.psh == 1)
         {
           return ConnectionResult(true, destIP, destPort, seqNum, 0);
         }

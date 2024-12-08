@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
   {
     commandLine('+', "Node is now a sender");
 
-    commandLine('i', "Sender Program’s Initialization");
+    commandLine('i', "Sender Program's Initialization");
     commandLine('?', "Please choose the sending mode");
     commandLine('?', "1. User input");
     commandLine('?', "2. File input");
@@ -179,19 +179,19 @@ int main(int argc, char *argv[])
     Client client(ip, port, serverPort);
 
     // UTK SEKARANG MINTA DULU JUST IN CASE
-    commandLine('?',
-                "Please enter the desired file name (without extension): ");
-    std::string requestedFileName;
-    std::cin.ignore();
-    std::getline(std::cin, requestedFileName);
+    // commandLine('?',
+    //             "Please enter the desired file name (without extension): ");
+    // std::string requestedFileName;
+    // std::cin.ignore();
+    // std::getline(std::cin, requestedFileName);
 
-    commandLine('?', "Please enter the desired file extension: ");
-    std::string requestedFileExtension;
-    std::cin.ignore();
-    std::getline(std::cin, requestedFileExtension);
+    // commandLine('?', "Please enter the desired file extension: ");
+    // std::string requestedFileExtension;
+    // std::cin.ignore();
+    // std::getline(std::cin, requestedFileExtension);
 
-    client.setFileName(requestedFileName);
-    client.setFileEx(requestedFileExtension);
+    // client.setFileName(requestedFileName);
+    // client.setFileEx(requestedFileExtension);
 
     client.run();
 

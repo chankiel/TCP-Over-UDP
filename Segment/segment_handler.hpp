@@ -35,6 +35,8 @@ public:
   uint32_t getCurrentAckNum();
   void goBackWindow();
   bool isFinished(uint32_t startingSeqNum);
+  void addMetadata(string fileFullName, uint16_t sourcePort, uint16_t destPort);
+  void markEOF();
 };
 
 #endif
