@@ -34,7 +34,6 @@ ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port)
     catch (const std::runtime_error &e)
     {
       cout << ERROR << brackets("TIMEOUT") + "Restarting searching for Broadcast Server" + brackets("ATTEMPT-" + std::to_string(i + 1))<<std::endl;
-      continue;
     }
   }
   throw std::runtime_error("Broadcast failed. Terminating Client. Thank you!");

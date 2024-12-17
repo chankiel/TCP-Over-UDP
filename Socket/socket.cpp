@@ -330,6 +330,9 @@ ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer,
   while (limit < 10 && !finished) {
     try {
       Message res = consumeBuffer(destIP, destPort);
+      if (res.segment.flags.fin == 1) {
+        return ConnectionResult(true, destIP, destPort, res.segment.seqNum, res.segment.ackNum);
+      }
 
       if (res.segment.seqNum < seqNumIt) {
         Segment temp = ack(0, res.segment.seqNum + 1);
@@ -353,13 +356,10 @@ ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer,
                   << brackets("A=" + std::to_string(seqNumIt)) << "Sent"
                   << endl;
       }
-      if (res.segment.flags.fin == 1) {
-        return ConnectionResult(true, destIP, destPort, res.segment.seqNum, res.segment.ackNum);
-      }
     } catch (const std::exception &e) {
       limit++;
       commandLine('!', "[ERROR] " + brackets(status_strings[(int)status]) + std::string(e.what()));
     }
   }
-  return ConnectionResult(false, destIP, destPort, seqNum, 0);
+  throw std::runtime_error("Receiving data Process Failed. Terminating Client. Thank you!");
 }

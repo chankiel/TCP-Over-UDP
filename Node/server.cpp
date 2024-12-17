@@ -9,7 +9,7 @@ int SERVER_MAX_TRY = 10;
 
 ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port)
 {
-  for(int i=0;i<SERVER_MAX_TRY;i++)
+  for (int i = 0; i < SERVER_MAX_TRY; i++)
   {
     try
     {
@@ -64,33 +64,33 @@ ConnectionResult Server::respondHandshake(string dest_ip, uint16_t dest_port)
     }
     catch (const std::exception &e)
     {
-      cout << ERROR << brackets("TIMEOUT") + "Restarting Handshake" + brackets("ATTEMPT-" + std::to_string(i + 1))<<std::endl;
+      cout << ERROR << brackets("TIMEOUT") + "Restarting Handshake" + brackets("ATTEMPT-" + std::to_string(i + 1)) << std::endl;
     }
   }
-  return ConnectionResult(false, dest_ip, dest_port, 0, 0);
+  throw std::runtime_error("Failed to receive broadcast. Restarting listening for Broadcast.");
 }
 
 ConnectionResult Server::listenBroadcast()
 {
-  std::cout<<std::endl;
+  std::cout << std::endl;
   commandLine('i', "Listening to the broadcast port for clients.");
-    try
-    {
-      Message answer =
-          connection->consumeBuffer("", 0, 0, 0, 0, SERVER_BROADCAST_TIMEOUT);
-      connection->setStatus(TCPStatusEnum::LISTENING);
-      commandLine('+', "Received Broadcast Message");
-      Segment temp = accBroad();
-      updateChecksum(temp);
-      connection->sendSegment(temp, answer.ip, answer.port);
-      return ConnectionResult(true, answer.ip, answer.port,
-                              answer.segment.seqNum, answer.segment.ackNum);
-    }
-    catch (const std::runtime_error &e)
-    {
-      return ConnectionResult(false, "", 0, 0, 0);
-    }
+  try
+  {
+    Message answer =
+        connection->consumeBuffer("", 0, 0, 0, 0, SERVER_BROADCAST_TIMEOUT);
+    connection->setStatus(TCPStatusEnum::LISTENING);
+    commandLine('+', "Received Broadcast Message");
+    Segment temp = accBroad();
+    updateChecksum(temp);
+    connection->sendSegment(temp, answer.ip, answer.port);
+    return ConnectionResult(true, answer.ip, answer.port,
+                            answer.segment.seqNum, answer.segment.ackNum);
   }
+  catch (const std::runtime_error &e)
+  {
+    throw std::runtime_error("Didn't found any Broadcast Request. Continue listening");
+  }
+}
 
 ConnectionResult Server::startFin(string dest_ip, uint16_t dest_port,
                                   uint32_t seqNum, uint32_t ackNum)
@@ -147,11 +147,11 @@ ConnectionResult Server::startFin(string dest_ip, uint16_t dest_port,
     }
     catch (const std::runtime_error &e)
     {
-      cout<< ERROR<< brackets("TIMEOUT") + "No respond for FIN request. Restarting sending for FIN to Client"+ brackets("ATTEMPT-"+std::to_string(i + 1))<<std::endl;
+      cout << ERROR << brackets("TIMEOUT") + "No respond for FIN request. Restarting sending for FIN to Client" + brackets("ATTEMPT-" + std::to_string(i + 1)) << std::endl;
       continue;
     }
   }
-  return ConnectionResult(false, dest_ip, dest_port, 0, 0);
+  throw std::runtime_error("Handshake response failed. Restarting listening for Broadcast.");
 }
 
 void Server::run()
@@ -162,53 +162,42 @@ void Server::run()
   while (true)
   {
     connection->setStatus(TCPStatusEnum::LISTENING);
-    ConnectionResult statusBroadcast = listenBroadcast();
-    if (!statusBroadcast.success)
+    try
     {
-      std::cerr << ERROR<<" Failed to receive broadcast. Restarting Server." << std::endl;
-      continue;
-    }
 
-    ConnectionResult statusHandshake = respondHandshake(statusBroadcast.ip, statusBroadcast.port);
-    if (!statusHandshake.success)
-    {
-      std::cerr << ERROR<<" Handshake response failed. Restarting Server." << std::endl;
-      continue;
-    }
+      ConnectionResult statusBroadcast = listenBroadcast();
 
-    bool isFile = true;
-    std::string fileFullName;
-    if (fileEx == "-1")
-    {
-      isFile = false;
-    }
-    else
-    {
-      fileFullName = fileEx.empty() ? fileName : fileName + "." + fileEx;
-    }
+      ConnectionResult statusHandshake = respondHandshake(statusBroadcast.ip, statusBroadcast.port);
 
-    ConnectionResult statusSend = connection->sendBackN(
-        reinterpret_cast<uint8_t *>(item.data()),
-        static_cast<uint32_t>(item.length()),
-        statusBroadcast.ip,
-        statusBroadcast.port,
-        statusHandshake.ackNum,
-        isFile,
-        fileFullName);
-    if (!statusSend.success)
-    {
-      std::cerr << ERROR<<" Sending data failed. Restarting Server." << std::endl;
-      continue;
-    }
+      bool isFile = true;
+      std::string fileFullName;
+      if (fileEx == "-1")
+      {
+        isFile = false;
+      }
+      else
+      {
+        fileFullName = fileEx.empty() ? fileName : fileName + "." + fileEx;
+      }
 
-    ConnectionResult statusFin = startFin(
-        statusBroadcast.ip,
-        statusBroadcast.port,
-        statusHandshake.seqNum,
-        statusHandshake.ackNum);
-    if (!statusFin.success)
+      ConnectionResult statusSend = connection->sendBackN(
+          reinterpret_cast<uint8_t *>(item.data()),
+          static_cast<uint32_t>(item.length()),
+          statusBroadcast.ip,
+          statusBroadcast.port,
+          statusHandshake.ackNum,
+          isFile,
+          fileFullName);
+
+      ConnectionResult statusFin = startFin(
+          statusBroadcast.ip,
+          statusBroadcast.port,
+          statusHandshake.seqNum,
+          statusHandshake.ackNum);
+    }
+    catch (const std::runtime_error &e)
     {
-      std::cerr << ERROR<<" FIN process failed. Restarting Server." << std::endl;
+      commandLine('!', "[ERROR] " + brackets(status_strings[(int)connection->getStatus()]) + std::string(e.what()));
     }
   }
 }
