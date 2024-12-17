@@ -16,7 +16,7 @@ public:
 
   ConnectionResult findBroadcast(string dest_ip, uint16_t dest_port);
   ConnectionResult startHandshake(string dest_ip, uint16_t dest_port);
-  ConnectionResult respondFin(string dest_ip, uint16_t dest_port, uint32_t seqNum,uint32_t ackNum); 
+  ConnectionResult respondFin(string dest_ip, uint16_t dest_port, uint32_t seqNum,uint32_t ackNum, uint32_t recfin_seqnum); 
 private:
   int serverPort;
 };

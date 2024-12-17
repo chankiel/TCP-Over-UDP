@@ -99,7 +99,6 @@ ConnectionResult Server::startFin(string dest_ip, uint16_t dest_port,
   {
     try
     {
-      // Send Fin
       connection->setStatus(TCPStatusEnum::CLOSE_WAIT);
       Segment finSeg = fin(seqNum + 1, ackNum);
       updateChecksum(finSeg);
@@ -201,8 +200,6 @@ void Server::run()
       std::cerr << ERROR<<" Sending data failed. Restarting Server." << std::endl;
       continue;
     }
-    cout << OUT << " Start waiting for Client if Server finished first." << endl;
-    std::this_thread::sleep_for(std::chrono::seconds(5));
 
     ConnectionResult statusFin = startFin(
         statusBroadcast.ip,

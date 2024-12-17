@@ -37,28 +37,34 @@ ConnectionResult Client::findBroadcast(string dest_ip, uint16_t dest_port)
       continue;
     }
   }
-  return ConnectionResult(false, "", 0, 0, 0);
+  throw std::runtime_error("Broadcast failed. Terminating Client. Thank you!");
 }
 
 ConnectionResult Client::respondFin(string dest_ip, uint16_t dest_port,
-                                    uint32_t seqNum, uint32_t ackNum)
+                                    uint32_t seqNum, uint32_t ackNum, uint32_t recfin_seqnum)
 {
+  bool isFirst = true;
+  uint32_t recfin_seq = recfin_seqnum;
   for (int i = 0; i < CLIENT_MAX_TRY; i++)
   {
     try
     {
       connection->setStatus(TCPStatusEnum::FIN_WAIT_1);
-      Message rec_fin = connection->consumeBuffer(
-          dest_ip, dest_port, 0, seqNum + 1, FIN_FLAG, CLIENT_COMMON_TIMEOUT);
+      if(!isFirst){
+        Message rec_fin = connection->consumeBuffer(
+            dest_ip, dest_port, 0, seqNum + 1, FIN_FLAG, CLIENT_COMMON_TIMEOUT);
+        recfin_seq = rec_fin.segment.seqNum;
+      }
+
       commandLine(
           '+', "[" + status_strings[static_cast<int>(connection->getStatus())] +
-                   "] [S=" + to_string(rec_fin.segment.seqNum) +
-                   "] [A=" + to_string(rec_fin.segment.ackNum) +
+                   "] [S=" + to_string(recfin_seq) +
+                   "] [A=" + to_string(seqNum+1) +
                    "] Received FIN request from  " + dest_ip +
                    to_string(dest_port));
       // Send ACK
       connection->setStatus(TCPStatusEnum::FIN_WAIT_2);
-      Segment ackSeg = ack(seqNum + 1, rec_fin.segment.seqNum + 1);
+      Segment ackSeg = ack(seqNum + 1, recfin_seq + 1);
       updateChecksum(ackSeg);
       connection->sendSegment(ackSeg, dest_ip, dest_port);
       commandLine(
@@ -68,7 +74,7 @@ ConnectionResult Client::respondFin(string dest_ip, uint16_t dest_port,
                    dest_ip + to_string(dest_port));
       // Send FIN
       connection->setStatus(TCPStatusEnum::TIME_WAIT);
-      Segment finSeg = fin(seqNum + 2, rec_fin.segment.seqNum + 1);
+      Segment finSeg = fin(seqNum + 2, recfin_seq + 1);
       updateChecksum(finSeg);
       connection->sendSegment(finSeg, dest_ip, dest_port);
       commandLine(
@@ -98,7 +104,7 @@ ConnectionResult Client::respondFin(string dest_ip, uint16_t dest_port,
       cout << ERROR << brackets("TIMEOUT") + "Restarting Process, Prepared to Respond for FIN" + brackets("ATTEMPT-" + std::to_string(i + 1))<<std::endl;
     }
   }
-  return ConnectionResult(false, dest_ip, dest_port, 0, 0);
+  throw std::runtime_error("Responding for Server's FIN Failed. Terminating Client. Thank you!");
 }
 
 ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
@@ -114,7 +120,6 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
   {
     try
     {
-      // Send syn?
       connection->sendSegment(synSegment, dest_ip, dest_port);
       connection->setStatus(TCPStatusEnum::SYN_SENT);
 
@@ -124,7 +129,6 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
                    "] Sending SYN request to " + dest_ip + ":" +
                    std::to_string(dest_port));
 
-      // Wait syn-ack?
       Message result = connection->consumeBuffer(
           dest_ip, dest_port, 0, r_seq_num + 1, SYN_ACK_FLAG, 10);
       commandLine(
@@ -134,7 +138,6 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
                    "] Received SYN-ACK request to " + dest_ip + ":" +
                    std::to_string(dest_port));
 
-      // Send ack?
       uint32_t ackNum = result.segment.seqNum + 1;
       Segment ackSegment = ack(r_seq_num + 1, ackNum);
       updateChecksum(ackSegment);
@@ -157,67 +160,49 @@ ConnectionResult Client::startHandshake(string dest_ip, uint16_t dest_port)
       cout << ERROR << brackets("TIMEOUT") + "Restarting Handshake" + brackets("ATTEMPT-" + std::to_string(i + 1))<<std::endl;
     }
   }
-  commandLine('e',
-              "[" + status_strings[static_cast<int>(connection->getStatus())] +
-                  "] Failed after 10 retries");
-  return ConnectionResult(false, dest_ip, dest_port, 0, 0);
+  throw std::runtime_error("Handshake failed. Terminating Client. Thank you!");
 }
 
 void Client::run()
 {
   connection->listen();
   connection->startListening();
+  try{
 
-  ConnectionResult statusBroadcast =
-      findBroadcast("255.255.255.255", serverPort);
-  if (!statusBroadcast.success)
-  {
-    std::cerr << ERROR << " Broadcast failed. Terminating Client. Thank you!" << std::endl;
-    exit(0);
-  }
+    ConnectionResult statusBroadcast =
+        findBroadcast("255.255.255.255", serverPort);
 
-  ConnectionResult statusHandshake =
-      startHandshake(statusBroadcast.ip, statusBroadcast.port);
-  if (!statusHandshake.success)
-  {
-    std::cerr << ERROR << " Handshake failed. Terminating Client. Thank you!" << std::endl;
-    exit(0);
-  }
+    ConnectionResult statusHandshake =
+        startHandshake(statusBroadcast.ip, statusBroadcast.port);
 
-  vector<Segment> res;
-  ConnectionResult statusReceive =
-      connection->receiveBackN(res, statusBroadcast.ip, statusBroadcast.port,
-                               statusHandshake.seqNum + 1);
-  if (!statusReceive.success)
-  {
-    std::cerr << ERROR << " Receiving Data Process failed. Terminating Client. Thank you!" << std::endl;
-    exit(0);
-  }
+    vector<Segment> res;
+    ConnectionResult statusReceive =
+        connection->receiveBackN(res, statusBroadcast.ip, statusBroadcast.port,
+                                statusHandshake.seqNum + 1);
 
-  ConnectionResult statusFin =
-      respondFin(statusBroadcast.ip, statusBroadcast.port,
-                 statusHandshake.seqNum, statusHandshake.ackNum);
-  if (!statusFin.success)
-  {
-    std::cerr << ERROR << " Responding for Server's FIN Failed. Terminating Client. Thank you!" << std::endl;
-    exit(0);
-  }
+    ConnectionResult statusFin =
+        respondFin(statusBroadcast.ip, statusBroadcast.port,
+                  statusHandshake.seqNum, statusHandshake.ackNum, statusReceive.seqNum);
 
-  if (res.back().flags.ece == 1)
-  {
-    std::string filename(reinterpret_cast<char *>(res.back().payload),
-                         res.back().payloadSize);
-    res.pop_back();
-    std::string result = connection->concatenatePayloads(res);
-    convertFromStrToFile(filename, result);
-    std::cout << OUT << " Terminating Client. Thank you!" << std::endl;
-  }
-  else
-  {
-    std::string result = connection->concatenatePayloads(res);
-    std::cout << OUT << " String received from Server. Result: " << std::endl;
-    std::cout << OUT <<" "<< result << std::endl;
-    std::cout << OUT << " Terminating Client. Thank you!" << std::endl;
+    if (res.back().flags.ece == 1)
+    {
+      std::string filename(reinterpret_cast<char *>(res.back().payload),
+                          res.back().payloadSize);
+      res.pop_back();
+      std::string result = connection->concatenatePayloads(res);
+      convertFromStrToFile(filename, result);
+      std::cout << OUT << " Terminating Client. Thank you!" << std::endl;
+    }
+    else
+    {
+      std::string result = connection->concatenatePayloads(res);
+      std::cout << OUT << " String received from Server. Result: " << std::endl;
+      std::cout << OUT <<" "<< result << std::endl;
+      std::cout << OUT << " Terminating Client. Thank you!" << std::endl;
+      exit(0);
+    }
+  }catch (const std::runtime_error &e){
+    commandLine('!', "[ERROR] " + brackets(status_strings[(int)connection->getStatus()]) + std::string(e.what()));
     exit(0);
   }
 }

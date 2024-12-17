@@ -319,45 +319,24 @@ string TCPSocket::concatenatePayloads(vector<Segment> &segments)
   return concatenatedData;
 }
 
+
 ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer,
                                          string destIP, uint16_t destPort,
-                                         uint32_t seqNum)
-{
+                                         uint32_t seqNum) {
   int i = 0;
+  bool finished = false;
   int limit = 0;
   uint32_t seqNumIt = seqNum;
-  std::optional<std::chrono::high_resolution_clock::time_point> start_time;
-  while (limit < 10)
-  {
-    try
-    {
-      bool consumedSucc = true;
-      Message res;
-      try
-      {
-        res = consumeBuffer(destIP, destPort, 0, 0, 0, start_time.has_value() ? 1 : 10);
-      }
-      catch (const std::exception &e)
-      {
-        consumedSucc = false;
-        if (!start_time.has_value())
-        {
-          throw e;
-        }
-      }
+  while (limit < 10 && !finished) {
+    try {
+      Message res = consumeBuffer(destIP, destPort);
 
-      if (consumedSucc && res.segment.seqNum < seqNumIt)
-      {
-        if (res.segment.flags.fin != 1)
-        {
-          Segment ackSegment = ack(0, res.segment.seqNum + 1);
-          updateChecksum(ackSegment);
-          sendSegment(ackSegment, destIP, destPort);
-          start_time = std::chrono::high_resolution_clock::now();
-        }
+      if (res.segment.seqNum < seqNumIt) {
+        Segment temp = ack(0, res.segment.seqNum + 1);
+        updateChecksum(temp);
+        sendSegment(temp, destIP, destPort);
       }
-      if (res.segment.seqNum == seqNumIt)
-      {
+      if (res.segment.seqNum == seqNumIt) {
         i++;
         resBuffer.push_back(res.segment);
         std::cout << IN << brackets(status_strings[(int)status])
@@ -365,44 +344,19 @@ ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer,
                   << brackets("S=" + std::to_string(res.segment.seqNum))
                   << "ACKed" << endl;
         seqNumIt++;
-        Segment ackSegment = ack(0, seqNumIt);
-        updateChecksum(ackSegment);
-        sendSegment(ackSegment, destIP, destPort);
+        Segment temp = ack(0, seqNumIt);
+        updateChecksum(temp);
+        sendSegment(temp, destIP, destPort);
 
         std::cout << OUT << brackets(status_strings[(int)status])
                   << brackets("Seq " + std::to_string(i))
                   << brackets("A=" + std::to_string(seqNumIt)) << "Sent"
                   << endl;
-
-        if (res.segment.flags.psh == 1)
-        {
-          if (!start_time.has_value())
-          {
-            // Start waiting for server's segments that hasnt been acked at server side
-            start_time = std::chrono::high_resolution_clock::now();
-            cout << OUT << " Start waiting for Segments who Server not yet received the ACK and send the corresponding ACK." << endl;
-            continue;
-          }
-          else
-          {
-            return ConnectionResult(true, destIP, destPort, seqNum, 0);
-          }
-        }
       }
-
-      if (start_time.has_value())
-      {
-        auto current_time = std::chrono::high_resolution_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current_time - *start_time);
-        if (elapsed.count() > 3)
-        {
-          // Consider finished in client's side meanwhile server's side hasn't
-          return ConnectionResult(true, destIP, destPort, seqNum, 0);
-        }
+      if (res.segment.flags.fin == 1) {
+        return ConnectionResult(true, destIP, destPort, res.segment.seqNum, res.segment.ackNum);
       }
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception &e) {
       limit++;
       commandLine('!', "[ERROR] " + brackets(status_strings[(int)status]) + std::string(e.what()));
     }
