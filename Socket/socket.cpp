@@ -4,6 +4,10 @@
 #include <iterator>
 #include <sys/types.h>
 
+int BROADCAST_TIMEOUT = 12;
+int COMMON_TIMEOUT = 12;
+int MAX_TRY = 10;
+
 TCPSocket::TCPSocket(const string &ip, int port)
     : ip(ip), port(port), isListening(false)
 {
@@ -12,15 +16,48 @@ TCPSocket::TCPSocket(const string &ip, int port)
   {
     throw std::runtime_error("Socket creation failed.");
   }
-  status = TCPStatusEnum::CLOSED;
-  sh = new SegmentHandler();
 }
 
 TCPSocket::~TCPSocket()
 {
   stopListening();
   close();
-  delete sh;
+}
+
+std::string TCPSocket::getClientKey(const string &ip, int port){
+  return ip+":"+std::to_string(port);
+}
+
+void TCPSocket::setStatusConnection(TCPStatusEnum newState,string &ip, int port) { 
+  lock_guard<mutex> lock(tableMutex);
+  std::string clientKey = getClientKey(ip,port);
+  connectionTable[clientKey].status = newState;
+}
+
+std::string TCPSocket::getStatusConnection(const string &ip, int port)  {
+  lock_guard<mutex> lock(tableMutex);
+  std::string clientKey = getClientKey(ip,port);
+  return status_strings[static_cast<int>(connectionTable[clientKey].status)];
+}
+
+void TCPSocket::setStatus(TCPStatusEnum newState){
+  status = newState;
+}
+
+TCPStatusEnum TCPSocket::getStatus(){
+  return status;
+}
+
+void TCPSocket::addNewConnection(const std::string &ip, int port){
+  lock_guard<mutex> lock(tableMutex);
+  std::string clientKey = getClientKey(ip,port);
+  connectionTable[clientKey] = ClientConnection();
+}
+
+void TCPSocket::deleteNewConnection(const std::string &ip, int port){
+  lock_guard<mutex> lock(tableMutex);
+  std::string clientKey = getClientKey(ip,port);
+  connectionTable.erase(clientKey);
 }
 
 void TCPSocket::listen()
@@ -89,16 +126,6 @@ void TCPSocket::sendSegment(const Segment &segment, const string &destinationIP,
   encodeSegment(segment, buffer);
   send(destinationIP, destinationPort, buffer, segmentSize);
   delete[] buffer;
-}
-
-int32_t TCPSocket::receive(void *buffer, uint32_t bufferSize, bool peek)
-{
-  sockaddr_in sourceAddress = {};
-  socklen_t addressLength = sizeof(sourceAddress);
-
-  int flags = peek ? MSG_PEEK : 0;
-  return recvfrom(sockfd, buffer, bufferSize, flags,
-                  (struct sockaddr *)&sourceAddress, &addressLength);
 }
 
 void TCPSocket::produceBuffer()
@@ -186,10 +213,6 @@ Message TCPSocket::consumeBuffer(const string &filterIP, uint16_t filterPort,
   throw std::runtime_error("Socket is no longer listening.");
 }
 
-void TCPSocket::setStatus(TCPStatusEnum newState) { status = newState; }
-
-TCPStatusEnum TCPSocket::getStatus() const { return status; }
-
 void TCPSocket::startListening()
 {
   isListening = true;
@@ -215,11 +238,327 @@ void TCPSocket::close()
   }
 }
 
+string TCPSocket::concatenatePayloads(vector<Segment> &segments)
+{
+  string concatenatedData;
+  for (const auto &segment : segments)
+  {
+    if (segment.payload != nullptr && segment.payloadSize > 0)
+    {
+      concatenatedData.append(reinterpret_cast<char *>(segment.payload),
+                              segment.payloadSize);
+    }
+  }
+  return concatenatedData;
+}
+
+ConnectionResult TCPSocket::findBroadcast(string dest_ip, uint16_t dest_port)
+{
+  setBroadcast();
+  for (int i = 0; i < MAX_TRY; i++)
+  {
+    try
+    {
+      Segment temp = broad();
+      updateChecksum(temp);
+
+      sendSegment(temp, dest_ip, dest_port);
+      commandLine('i', "Sending Broadcast");
+      Message answer =
+          consumeBuffer("", 0, 0, 0, 255, BROADCAST_TIMEOUT);
+      commandLine('i', "Someone received the broadcast");
+      return ConnectionResult(true, answer.ip, answer.port,
+                              answer.segment.seqNum, answer.segment.ackNum);
+    }
+    catch (const std::runtime_error &e)
+    {
+      cout << ERROR << brackets("TIMEOUT") + "Restarting searching for Broadcast Server" + brackets("ATTEMPT-" + std::to_string(i + 1))<<std::endl;
+    }
+  }
+  throw std::runtime_error("Broadcast failed. Terminating Client. Thank you!");
+}
+
+ConnectionResult TCPSocket::startHandshake(string dest_ip, uint16_t dest_port)
+{
+  uint32_t r_seq_num = generateRandomNumber(10, 4294967295);
+
+  commandLine('i', "Sender Program's Three Way Handshake");
+
+  Segment synSegment = syn(r_seq_num);
+  updateChecksum(synSegment);
+
+  for (int i = 0; i < 10; i++)
+  {
+    try
+    {
+      sendSegment(synSegment, dest_ip, dest_port);
+      setStatus(TCPStatusEnum::SYN_SENT);
+
+      commandLine(
+          'i', "[" + status_strings[static_cast<int>(getStatus())] +
+                   "] [S=" + std::to_string(r_seq_num) +
+                   "] Sending SYN request to " + dest_ip + ":" +
+                   std::to_string(dest_port));
+
+      Message result = consumeBuffer(
+          dest_ip, dest_port, 0, r_seq_num + 1, SYN_ACK_FLAG, 10);
+      commandLine(
+          'i', "[" + status_strings[static_cast<int>(getStatus())] +
+                   "] [S=" + std::to_string(result.segment.seqNum) +
+                   "] [A=" + std::to_string(result.segment.ackNum) +
+                   "] Received SYN-ACK request to " + dest_ip + ":" +
+                   std::to_string(dest_port));
+
+      uint32_t ackNum = result.segment.seqNum + 1;
+      Segment ackSegment = ack(r_seq_num + 1, ackNum);
+      updateChecksum(ackSegment);
+
+      sendSegment(ackSegment, dest_ip, dest_port);
+      commandLine(
+          'i', "[" + status_strings[static_cast<int>(getStatus())] +
+                   "] [S=" + std::to_string(ackSegment.seqNum) +
+                   "] [A=" + std::to_string(ackSegment.ackNum) +
+                   "] Sending ACK request to " + dest_ip + ":" +
+                   std::to_string(dest_port));
+      commandLine('~', "Ready to receive input from " + dest_ip + ":" +
+                           std::to_string(dest_port));
+      setStatus(TCPStatusEnum::ESTABLISHED);
+      return ConnectionResult(true, dest_ip, dest_port, ackSegment.seqNum,
+                              ackSegment.ackNum);
+    }
+    catch (const std::exception &e)
+    {
+      cout << ERROR << brackets("TIMEOUT") + "Restarting Handshake" + brackets("ATTEMPT-" + std::to_string(i + 1))<<std::endl;
+    }
+  }
+  throw std::runtime_error("Handshake failed. Terminating Client. Thank you!");
+}
+
+ConnectionResult TCPSocket::respondFin(string dest_ip, uint16_t dest_port,
+                                    uint32_t seqNum, uint32_t ackNum, uint32_t recfin_seqnum)
+{
+  bool isFirst = true;
+  uint32_t recfin_seq = recfin_seqnum;
+  for (int i = 0; i < MAX_TRY; i++)
+  {
+    try
+    {
+      setStatus(TCPStatusEnum::FIN_WAIT_1);
+      if(!isFirst){
+        Message rec_fin = consumeBuffer(
+            dest_ip, dest_port, 0, seqNum + 1, FIN_FLAG, COMMON_TIMEOUT);
+        recfin_seq = rec_fin.segment.seqNum;
+      }
+
+      commandLine(
+          '+', "[" + status_strings[static_cast<int>(getStatus())] +
+                   "] [S=" + to_string(recfin_seq) +
+                   "] [A=" + to_string(seqNum+1) +
+                   "] Received FIN request from  " + dest_ip +
+                   to_string(dest_port));
+      // Send ACK
+      setStatus(TCPStatusEnum::FIN_WAIT_2);
+      Segment ackSeg = ack(seqNum + 1, recfin_seq + 1);
+      updateChecksum(ackSeg);
+      sendSegment(ackSeg, dest_ip, dest_port);
+      commandLine(
+          'i', "[" + status_strings[static_cast<int>(getStatus())] +
+                   "] [S=" + to_string(ackSeg.seqNum) + "] [A=" +
+                   to_string(ackSeg.ackNum) + "] Send ACK request from  " +
+                   dest_ip + to_string(dest_port));
+      // Send FIN
+      setStatus(TCPStatusEnum::TIME_WAIT);
+      Segment finSeg = fin(seqNum + 2, recfin_seq + 1);
+      updateChecksum(finSeg);
+      sendSegment(finSeg, dest_ip, dest_port);
+      commandLine(
+          'i', "[" + status_strings[static_cast<int>(getStatus())] +
+                   "] [S=" + to_string(finSeg.seqNum) + "] [A=" +
+                   to_string(finSeg.ackNum) + "] Send FIN request from  " +
+                   dest_ip + to_string(dest_port));
+
+      // REC ACK
+      setStatus(TCPStatusEnum::CLOSED);
+      Message answer_fin =
+          consumeBuffer(dest_ip, dest_port, 0, finSeg.seqNum + 1,
+                                    ACK_FLAG, COMMON_TIMEOUT);
+      commandLine(
+          '+', "[" + status_strings[static_cast<int>(getStatus())] +
+                   "] [S=" + to_string(answer_fin.segment.seqNum) +
+                   "] [A=" + to_string(answer_fin.segment.ackNum) +
+                   "] Received FIN request from  " + dest_ip +
+                   to_string(dest_port));
+
+      commandLine('i', "Connection Closed");
+
+      return ConnectionResult(true, dest_ip, dest_port, 0, 0);
+    }
+    catch (const std::runtime_error &e)
+    {
+      cout << ERROR << brackets("TIMEOUT") + "Restarting Process, Prepared to Respond for FIN" + brackets("ATTEMPT-" + std::to_string(i + 1))<<std::endl;
+    }
+  }
+  throw std::runtime_error("Responding for Server's FIN Failed. Terminating Client. Thank you!");
+}
+
+// Server Role
+ConnectionResult TCPSocket::respondHandshake(string dest_ip, uint16_t dest_port)
+{
+  for (int i = 0; i < MAX_TRY; i++)
+  {
+    try
+    {
+      Message sync_message =
+          consumeBuffer(dest_ip, dest_port, 0, 0, SYN_FLAG, 10);
+      setStatusConnection(TCPStatusEnum::SYN_RECEIVED,dest_ip,dest_port);
+      std::string destIP = sync_message.ip;
+      uint16_t destPort = sync_message.port;
+      uint32_t sequence_num_first = sync_message.segment.seqNum;
+
+      commandLine(
+          'i', "[" + getStatusConnection(dest_ip,dest_port) +
+                   "] [S=" + std::to_string(sequence_num_first) +
+                   "] Received SYN request from " + dest_ip + ":" +
+                   std::to_string(destPort));
+
+      // Sending SYN-ACK Request
+      uint32_t sequence_num_second = generateRandomNumber(1, 1000);
+      uint32_t ack_num_second = sequence_num_first + 1;
+
+      commandLine(
+          'i', "[" + getStatusConnection(dest_ip, dest_port) +
+                   "] [S=" + std::to_string(sequence_num_second) +
+                   "] [A=" + std::to_string(ack_num_second) +
+                   "] Sending SYN-ACK request to " + dest_ip + ":" +
+                   std::to_string(destPort));
+      Segment synSeg = synAck(sequence_num_second, ack_num_second);
+      updateChecksum(synSeg);
+      sendSegment(synSeg, dest_ip, dest_port);
+      setStatusConnection(TCPStatusEnum::SYN_SENT,dest_ip,dest_port);
+
+      // Received ACK Request
+      Message ack_message =
+          consumeBuffer(destIP, destPort, 0, 0, ACK_FLAG);
+      setStatusConnection(TCPStatusEnum::ESTABLISHED,dest_ip,dest_port);
+      uint32_t ack_num_third = ack_message.segment.ackNum;
+      uint32_t seq_num_third = ack_message.segment.seqNum;
+      commandLine(
+          'i', "[" + getStatusConnection(dest_ip,dest_port) +
+                   "] [A=" + std::to_string(ack_num_third) +
+                   "] Received ACK request from " + dest_ip + ":" +
+                   std::to_string(destPort));
+
+      // Check Sequence and ACK validity
+      if (ack_num_third == sequence_num_second + 1)
+      {
+        commandLine('i', "Sending input to " + dest_ip + ":" +
+                             std::to_string(destPort));
+        return ConnectionResult(true, destIP, destPort, sequence_num_second + 1,
+                                seq_num_third + 1);
+      }
+    }
+    catch (const std::exception &e)
+    {
+      cout << ERROR << brackets("TIMEOUT") + "Restarting Handshake" + brackets("ATTEMPT-" + std::to_string(i + 1)) << std::endl;
+    }
+  }
+  throw std::runtime_error("Failed to receive broadcast. Restarting listening for Broadcast.");
+}
+
+ConnectionResult TCPSocket::listenBroadcast()
+{
+  std::cout << std::endl;
+  commandLine('i', "Listening to the broadcast port for clients.");
+  try
+  {
+    Message answer =
+        consumeBuffer("",0, 0, 0, 128, BROADCAST_TIMEOUT);
+    commandLine('+', "Received Broadcast Message");
+    Segment temp = accBroad();
+    updateChecksum(temp);
+    sendSegment(temp,answer.ip,answer.port);
+    return ConnectionResult(true, answer.ip, answer.port,
+                            answer.segment.seqNum, answer.segment.ackNum);
+  }
+  catch (const std::runtime_error &e)
+  {
+    throw std::runtime_error("Didn't found any Broadcast Request. Continue listening");
+  }
+}
+
+ConnectionResult TCPSocket::startFin(string dest_ip, uint16_t dest_port,
+                                  uint32_t seqNum, uint32_t ackNum)
+{
+  for (int i = 0; i < MAX_TRY; i++)
+  {
+    try
+    {
+      setStatusConnection(TCPStatusEnum::CLOSE_WAIT,dest_ip,dest_port);
+      Segment finSeg = fin(seqNum + 1, ackNum);
+      updateChecksum(finSeg);
+      sendSegment(finSeg, dest_ip, dest_port);
+      commandLine(
+          'i', "[" + getStatusConnection(dest_ip,dest_port) +
+                   "] [S=" + to_string(finSeg.seqNum) + "] [A=" +
+                   to_string(finSeg.ackNum) + "] Sending FIN request to " +
+                   dest_ip + ":" + to_string(dest_port));
+      // REC ACK
+      Message answer_fin =
+          consumeBuffer(dest_ip, dest_port, 0, finSeg.seqNum + 1,
+                                    ACK_FLAG, COMMON_TIMEOUT);
+      commandLine(
+          '+', "[" + status_strings[static_cast<int>(getStatus())] +
+                   "] [S=" + to_string(answer_fin.segment.seqNum) +
+                   "] [A=" + to_string(answer_fin.segment.ackNum) +
+                   "] Received ACK request from  " + dest_ip +
+                   to_string(dest_port));
+      // REC FIN
+      setStatus(TCPStatusEnum::LAST_ACK);
+      Message fin2 =
+          consumeBuffer(dest_ip, dest_port, 0, finSeg.seqNum + 1,
+                                    FIN_FLAG, COMMON_TIMEOUT);
+      commandLine(
+          '+', "[" + status_strings[static_cast<int>(getStatus())] +
+                   "] [S=" + to_string(fin2.segment.seqNum) +
+                   "] [A=" + to_string(fin2.segment.ackNum) +
+                   "] Received FIN request from  " + dest_ip +
+                   to_string(dest_port));
+
+      // Send ACK
+      setStatus(TCPStatusEnum::CLOSED);
+      Segment ackSeg = ack(seqNum + 2, fin2.segment.seqNum + 1);
+      updateChecksum(ackSeg);
+      sendSegment(ackSeg, dest_ip, dest_port);
+
+      commandLine(
+          'i', "[" + status_strings[static_cast<int>(getStatus())] +
+                   "] [S=" + to_string(ackSeg.seqNum) + "] [A=" +
+                   to_string(ackSeg.ackNum) + "] Sending FIN request to " +
+                   dest_ip + ":" + to_string(dest_port));
+
+      commandLine('i', "Connection Closed");
+      return ConnectionResult(true, dest_ip, dest_port, 0, 0);
+    }
+    catch (const std::runtime_error &e)
+    {
+      cout << ERROR << brackets("TIMEOUT") + "No respond for FIN request. Restarting sending for FIN to Client" + brackets("ATTEMPT-" + std::to_string(i + 1)) << std::endl;
+      continue;
+    }
+  }
+  throw std::runtime_error("Handshake response failed. Restarting listening for Broadcast.");
+}
+
 ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
                                       const string &destIP, uint16_t destPort,
                                       uint32_t startingSeqNum, bool isFile,
                                       string fileFullName)
 {
+  SegmentHandler *sh = nullptr;
+  std::string clientKey = getClientKey(destIP,destPort);
+  {
+      lock_guard<mutex> lock(tableMutex);
+      sh = connectionTable[clientKey].sh.get();
+  }
   sh->setDataStream(dataStream, dataSize, startingSeqNum, port, destPort);
   if (isFile)
   {
@@ -239,11 +578,11 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
       {
         break;
       }
-      threads.emplace_back([this, seg = *seg, destIP, destPort, startingSeqNum,
+      threads.emplace_back([this,sh, seg = *seg, destIP, destPort, startingSeqNum,
                             &retry]()
                            {
         try {
-          std::cout << OUT << brackets(status_strings[(int)status])
+          std::cout << OUT << brackets(getStatusConnection(destIP,destPort))
                     << brackets("Seq " +
                                 std::to_string(seg.seqNum - startingSeqNum))
                     << brackets("S=" + std::to_string(seg.seqNum)) << "Sent"
@@ -304,21 +643,6 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
             << "All segments sent to " << destIP << ":" << destPort << endl;
   return ConnectionResult(true, destIP, destPort, 0, 0);
 }
-
-string TCPSocket::concatenatePayloads(vector<Segment> &segments)
-{
-  string concatenatedData;
-  for (const auto &segment : segments)
-  {
-    if (segment.payload != nullptr && segment.payloadSize > 0)
-    {
-      concatenatedData.append(reinterpret_cast<char *>(segment.payload),
-                              segment.payloadSize);
-    }
-  }
-  return concatenatedData;
-}
-
 
 ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer,
                                          string destIP, uint16_t destPort,

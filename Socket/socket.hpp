@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <vector>
 #include "../tools/tools.hpp"
+#include <unordered_map>
+#include <memory>
 
 using std::condition_variable;
 using std::lock_guard;
@@ -46,19 +48,36 @@ const std::vector<std::string> status_strings = {
     "LISTENING", "SYN_SENT", "SYN_RECEIVED", "ESTABLISHED", "FIN_WAIT_1",
     "FIN_WAIT_2", "CLOSE_WAIT", "CLOSING", "LAST_ACK", "TIME_WAIT", "CLOSED"};
 
+struct ClientConnection {
+  TCPStatusEnum status;
+  std::unique_ptr<SegmentHandler> sh;
+  ClientConnection(): status(TCPStatusEnum::LISTENING), sh(std::make_unique<SegmentHandler>()){}
+
+  ClientConnection(ClientConnection&&) = default;
+  ClientConnection& operator=(ClientConnection&&) = default;
+
+  ClientConnection(const ClientConnection&) = delete;
+  ClientConnection& operator=(const ClientConnection&) = delete;
+  
+};
+
 class TCPSocket
 {
 private:
   string ip;
   int32_t port;
   int32_t sockfd;
+  TCPStatusEnum status;
+
   vector<Message> packetBuffer;
   mutex bufferMutex;
   condition_variable bufferCondition;
-  TCPStatusEnum status;
+
   bool isListening;
   std::thread listenerThread;
-  SegmentHandler *sh;
+
+  std::unordered_map<std::string, ClientConnection> connectionTable;
+  mutex tableMutex;
 
   sockaddr_in createSockAddr(const string &ipAddress, int port);
 
@@ -69,6 +88,18 @@ public:
   void setBroadcast();
   void listen();
 
+  std::string getClientKey(const string &ip, int port);
+  void addNewConnection(const std::string &ip, int port);
+  void deleteNewConnection(const std::string &ip, int port);
+
+  // General
+  void setStatus(TCPStatusEnum newState);
+  TCPStatusEnum getStatus() ;
+
+  // For server
+  void setStatusConnection(TCPStatusEnum newState,string &ip, int port);
+  std::string getStatusConnection(const string &ip, int port) ;
+
   void startListening();
   void stopListening();
 
@@ -77,8 +108,6 @@ public:
   void sendSegment(const Segment &segment, const string &destinationIP,
                    uint16_t destinationPort);
 
-  int32_t receive(void *buffer, uint32_t bufferSize, bool peek = false);
-
   void produceBuffer();
   Message consumeBuffer(const string &filterIP = "", uint16_t filterPort = 0,
                         uint32_t filterSeqNum = 0, uint32_t filterAckNum = 0,
@@ -86,11 +115,18 @@ public:
 
   ConnectionResult sendBackN(uint8_t *dataStream, uint32_t dataSize,
                  const string &destIP, uint16_t destPort, uint32_t startingSeqNum, bool isFile, string fileFullName);
-  string concatenatePayloads(vector<Segment> &segments);
   ConnectionResult receiveBackN(vector<Segment> &resBuffer, string dest_ip, uint16_t dest_port, uint32_t seqNum);
+  string concatenatePayloads(vector<Segment> &segments);
 
-  void setStatus(TCPStatusEnum newState);
-  TCPStatusEnum getStatus() const;
+  // Client Role
+  ConnectionResult findBroadcast(string dest_ip, uint16_t dest_port);
+  ConnectionResult startHandshake(string dest_ip, uint16_t dest_port);
+  ConnectionResult respondFin(string dest_ip, uint16_t dest_port, uint32_t seqNum,uint32_t ackNum, uint32_t recfin_seqnum); 
+
+  // Server Role
+  ConnectionResult respondHandshake(string dest_ip, uint16_t dest_port);
+  ConnectionResult startFin(string dest_ip, uint16_t dest_port, uint32_t seqNum, uint32_t ackNum);
+  ConnectionResult listenBroadcast();
   void close();
 };
 

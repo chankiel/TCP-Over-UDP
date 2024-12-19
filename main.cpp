@@ -1,8 +1,7 @@
 #include "Node/client.hpp"
 #include "Node/server.hpp"
 #include "Segment/segment.hpp"
-#include "tools/fileReceiver.hpp"
-#include "tools/fileSender.hpp"
+#include "tools/fileHandler.hpp"
 #include <algorithm>
 #include <cctype>
 #include <filesystem>

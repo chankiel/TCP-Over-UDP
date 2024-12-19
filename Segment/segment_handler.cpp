@@ -38,11 +38,8 @@ void SegmentHandler::generateSegments(uint32_t startingSeqNum,
     seg.destPort = destPort;
 
     iterator += payloadSize;
-    // while (seg.checksum == 0)
-    // {
     seg.checksum = calculateChecksum(seg);
     updateChecksum(seg);
-    // }
   }
 
   dataIndex = numSegments - 1;

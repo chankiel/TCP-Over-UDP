@@ -10,7 +10,7 @@
 Segment broad() {
   Segment segment;
   segment.flags.ack = 0;
-  segment.flags.cwr = 0;
+  segment.flags.cwr = 1;
   segment.flags.ece = 0;
   segment.flags.fin = 0;
   segment.flags.psh = 0;
@@ -149,41 +149,6 @@ uint16_t calculateChecksum(Segment &segment) {
   sum = ~sum;
   return static_cast<uint16_t>(sum);
 }
-// uint16_t calculateChecksum(Segment &segment) {
-//   // std::cout << "calc: " << std::endl;
-//   // printSegment(segment);
-//   segment.checksum = 0;
-
-//   const size_t segmentSize = sizeof(Segment);
-//   const size_t payloadSize = (segment.data_offset - 5) * 4;
-//   const size_t totalSize = segmentSize + payloadSize;
-
-//   uint8_t buffer[totalSize];
-//   memset(buffer, 0, totalSize);
-
-//   memcpy(buffer, &segment, segmentSize);
-
-//   if (segment.payload != nullptr && payloadSize > 0) {
-//     memcpy(buffer + segmentSize, &segment.payload, payloadSize);
-//   }
-
-//   uint16_t sum = 0;
-//   for (size_t i = 0; i < totalSize; i += 2) {
-//     uint16_t word = (buffer[i] << 8);
-//     if (i + 1 < totalSize) {
-//       word |= buffer[i + 1];
-//     }
-//     sum += word;
-
-//     while (sum >> 16) {
-//       sum = (sum & 0xFFFF) + (sum >> 16);
-//     }
-//   }
-
-//   uint16_t checksum = ~sum;
-
-//   return checksum;
-// }
 
 /**
  * Update a Segment with the calculated checksum

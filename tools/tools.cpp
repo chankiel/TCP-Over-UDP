@@ -53,3 +53,13 @@ std::string stringToBinary(const std::string &input)
 
     return binaryString;
 }
+
+std::string strip(const std::string& input, char character) {
+    size_t start = input.find_first_not_of(character);
+    if (start == std::string::npos) {
+        return "";
+    }
+
+    size_t end = input.find_last_not_of(character);
+    return input.substr(start, end - start + 1);
+}
