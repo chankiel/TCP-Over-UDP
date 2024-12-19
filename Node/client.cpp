@@ -53,10 +53,9 @@ void Client::run()
       std::cout << OUT << " String received from Server. Result: " << std::endl;
       std::cout << OUT <<" "<< result << std::endl;
       std::cout << OUT << " Terminating Client. Thank you!" << std::endl;
-      exit(0);
     }
   }catch (const std::runtime_error &e){
     commandLine('!', "[ERROR] " + brackets(status_strings[(int)connection->getStatus()]) + std::string(e.what()));
-    exit(0);
   }
+  exit(0);
 }
