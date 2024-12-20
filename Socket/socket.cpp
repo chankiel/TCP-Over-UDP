@@ -157,6 +157,12 @@ void TCPSocket::produceBuffer()
         continue;
       }
 
+      // if (!isValidCRC(segment))
+      // {
+      //   std::cout<<"Invalid CRC"<<std::endl;
+      //   continue;
+      // }
+
       Message message(inet_ntoa(clientAddress.sin_addr),
                       ntohs(clientAddress.sin_port), segment);
 
@@ -260,8 +266,6 @@ ConnectionResult TCPSocket::findBroadcast(string dest_ip, uint16_t dest_port)
     try
     {
       Segment temp = broad();
-      updateChecksum(temp);
-
       sendSegment(temp, dest_ip, dest_port);
       commandLine('i', "Sending Broadcast");
       Message answer =
@@ -285,7 +289,6 @@ ConnectionResult TCPSocket::startHandshake(string dest_ip, uint16_t dest_port)
   commandLine('i', "Sender Program's Three Way Handshake");
 
   Segment synSegment = syn(r_seq_num);
-  updateChecksum(synSegment);
 
   for (int i = 0; i < 10; i++)
   {
@@ -311,7 +314,6 @@ ConnectionResult TCPSocket::startHandshake(string dest_ip, uint16_t dest_port)
 
       uint32_t ackNum = result.segment.seqNum + 1;
       Segment ackSegment = ack(r_seq_num + 1, ackNum);
-      updateChecksum(ackSegment);
 
       sendSegment(ackSegment, dest_ip, dest_port);
       commandLine(
@@ -359,7 +361,6 @@ ConnectionResult TCPSocket::respondFin(string dest_ip, uint16_t dest_port,
       // Send ACK
       setStatus(TCPStatusEnum::FIN_WAIT_2);
       Segment ackSeg = ack(seqNum + 1, recfin_seq + 1);
-      updateChecksum(ackSeg);
       sendSegment(ackSeg, dest_ip, dest_port);
       commandLine(
           'i', "[" + status_strings[static_cast<int>(getStatus())] +
@@ -369,7 +370,6 @@ ConnectionResult TCPSocket::respondFin(string dest_ip, uint16_t dest_port,
       // Send FIN
       setStatus(TCPStatusEnum::TIME_WAIT);
       Segment finSeg = fin(seqNum + 2, recfin_seq + 1);
-      updateChecksum(finSeg);
       sendSegment(finSeg, dest_ip, dest_port);
       commandLine(
           'i', "[" + status_strings[static_cast<int>(getStatus())] +
@@ -432,7 +432,6 @@ ConnectionResult TCPSocket::respondHandshake(string dest_ip, uint16_t dest_port)
                    "] Sending SYN-ACK request to " + dest_ip + ":" +
                    std::to_string(destPort));
       Segment synSeg = synAck(sequence_num_second, ack_num_second);
-      updateChecksum(synSeg);
       sendSegment(synSeg, dest_ip, dest_port);
       setStatusConnection(TCPStatusEnum::SYN_SENT,dest_ip,dest_port);
 
@@ -475,7 +474,6 @@ ConnectionResult TCPSocket::listenBroadcast()
         consumeBuffer("",0, 0, 0, 128, BROADCAST_TIMEOUT);
     commandLine('+', "Received Broadcast Message");
     Segment temp = accBroad();
-    updateChecksum(temp);
     sendSegment(temp,answer.ip,answer.port);
     return ConnectionResult(true, answer.ip, answer.port,
                             answer.segment.seqNum, answer.segment.ackNum);
@@ -495,7 +493,6 @@ ConnectionResult TCPSocket::startFin(string dest_ip, uint16_t dest_port,
     {
       setStatusConnection(TCPStatusEnum::CLOSE_WAIT,dest_ip,dest_port);
       Segment finSeg = fin(seqNum + 1, ackNum);
-      updateChecksum(finSeg);
       sendSegment(finSeg, dest_ip, dest_port);
       commandLine(
           'i', "[" + getStatusConnection(dest_ip,dest_port) +
@@ -527,7 +524,6 @@ ConnectionResult TCPSocket::startFin(string dest_ip, uint16_t dest_port,
       // Send ACK
       setStatus(TCPStatusEnum::CLOSED);
       Segment ackSeg = ack(seqNum + 2, fin2.segment.seqNum + 1);
-      updateChecksum(ackSeg);
       sendSegment(ackSeg, dest_ip, dest_port);
 
       commandLine(
@@ -660,7 +656,6 @@ ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer,
 
       if (res.segment.seqNum < seqNumIt) {
         Segment temp = ack(0, res.segment.seqNum + 1);
-        updateChecksum(temp);
         sendSegment(temp, destIP, destPort);
       }
       if (res.segment.seqNum == seqNumIt) {
@@ -672,7 +667,6 @@ ConnectionResult TCPSocket::receiveBackN(vector<Segment> &resBuffer,
                   << "ACKed" << endl;
         seqNumIt++;
         Segment temp = ack(0, seqNumIt);
-        updateChecksum(temp);
         sendSegment(temp, destIP, destPort);
 
         std::cout << OUT << brackets(status_strings[(int)status])

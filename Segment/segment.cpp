@@ -17,6 +17,8 @@ Segment broad() {
   segment.flags.rst = 0;
   segment.flags.syn = 0;
   segment.flags.urg = 0;
+  updateChecksum(segment);
+  // updateCRC(segment);
   return segment;
 }
 
@@ -33,6 +35,8 @@ Segment accBroad() {
   segment.flags.rst = 1;
   segment.flags.syn = 1;
   segment.flags.urg = 1;
+  updateChecksum(segment);
+  // updateCRC(segment);
   return segment;
 }
 
@@ -45,6 +49,8 @@ Segment syn(uint32_t seqNum) {
   segment.flags.syn = 1;
   segment.data_offset = 6;
   segment.payloadSize = 0;
+  updateChecksum(segment);
+  // updateCRC(segment);
   return segment;
 }
 
@@ -57,6 +63,8 @@ Segment ack(uint32_t seqNum, uint32_t ackNum) {
   segment.ackNum = ackNum;
   segment.flags.ack = 1;
   segment.payloadSize = 0;
+  updateChecksum(segment);
+  // updateCRC(segment);
   return segment;
 }
 
@@ -70,6 +78,8 @@ Segment synAck(uint32_t seqNum, uint32_t ackNum) {
   segment.flags.syn = 1;
   segment.flags.ack = 1;
   segment.payloadSize = 0;
+  updateChecksum(segment);
+  // updateCRC(segment);
   return segment;
 }
 
@@ -82,6 +92,8 @@ Segment fin(uint32_t seqNum, uint32_t ackNum) {
   segment.ackNum = ackNum;
   segment.flags.fin = 1;
   segment.payloadSize = 0;
+  updateChecksum(segment);
+  // updateCRC(segment);
   return segment;
 }
 
@@ -95,6 +107,8 @@ Segment finAck(uint32_t seqNum, uint32_t ackNum) {
   segment.flags.fin = 1;
   segment.flags.ack = 1;
   segment.payloadSize = 0;
+  updateChecksum(segment);
+  // updateCRC(segment);
   return segment;
 }
 
@@ -155,12 +169,8 @@ uint16_t calculateChecksum(Segment &segment) {
  */
 // Segment updateChecksum(Segment &segment) {
 void updateChecksum(Segment &segment) {
-  // std::cout << "up: " << std::endl;
-  // printSegment(segment);
-
   uint16_t checksum = calculateChecksum(segment);
   segment.checksum = checksum;
-  // return segment;
 }
 
 /**
@@ -340,4 +350,50 @@ uint8_t getFlags8(const Segment *segment) {
   result |= (segment->flags.fin);
 
   return result;
+}
+
+// CRC-16 calculation function
+uint16_t calculateCRC16(const Segment &segment) {
+    uint16_t crc = 0xFFFF;  // Initial CRC value for CRC-16
+
+    // Combine Segment data and payload into a buffer
+    const size_t segmentSize = sizeof(Segment);
+    const size_t totalSize = segmentSize + segment.payloadSize;
+    uint8_t *buffer = new uint8_t[totalSize];
+    memset(buffer, 0, totalSize);
+
+    memcpy(buffer, &segment, segmentSize);
+    if (segment.payload != nullptr && segment.payloadSize > 0) {
+        memcpy(buffer + segmentSize, segment.payload, segment.payloadSize);
+    }
+
+    // CRC calculation loop for CRC-16
+    for (size_t i = 0; i < totalSize; i++) {
+        crc ^= (buffer[i] << 8);  // Shift the byte into the upper 8 bits of crc
+        for (int j = 0; j < 8; j++) {
+            if (crc & 0x8000) {  // Check if the left-most bit is 1
+                crc = (crc << 1) ^ 0x8005;
+            } else {
+                crc <<= 1;
+            }
+        }
+    }
+
+    delete[] buffer;
+    return crc;  // Return the CRC-16 value
+}
+
+// Method to update the CRC in a segment
+Segment updateCRC(Segment &segment) {
+    uint16_t crc = calculateCRC16(segment);
+    segment.crc = crc;  // Store CRC-16 value (16 bits)
+    return segment;
+}
+
+// Method to validate the CRC
+bool isValidCRC(const Segment &segment) {
+    uint16_t originalCRC = segment.crc;
+    uint16_t computedCRC = calculateCRC16(segment);
+    std::cout<<originalCRC<<" "<<computedCRC<<std::endl;
+    return originalCRC == computedCRC;
 }

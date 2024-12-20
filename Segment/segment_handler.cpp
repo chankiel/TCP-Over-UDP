@@ -38,7 +38,6 @@ void SegmentHandler::generateSegments(uint32_t startingSeqNum,
     seg.destPort = destPort;
 
     iterator += payloadSize;
-    seg.checksum = calculateChecksum(seg);
     updateChecksum(seg);
   }
 
@@ -106,6 +105,7 @@ void SegmentHandler::addMetadata(string fileFullName, uint16_t sourcePort,
   seg.seqNum = segmentBuffer.back().seqNum + 1;
   seg.flags.ece = 1;
   updateChecksum(seg);
+  // updateCRC(seg);
   segmentBuffer.push_back(seg);
 }
 

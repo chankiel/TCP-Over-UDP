@@ -17,7 +17,6 @@ void Server::run()
       threads.emplace_back([statusBroadcast, this]()
                            {
         connection->addNewConnection(statusBroadcast.ip,statusBroadcast.port);
-        std::cout<<statusBroadcast.ip<<":"<<statusBroadcast.port<<endl;
         try{
           ConnectionResult statusHandshake = connection->respondHandshake(statusBroadcast.ip, statusBroadcast.port);
           bool isFile = true;

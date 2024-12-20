@@ -40,10 +40,11 @@ struct Segment
   uint16_t checksum;
   uint16_t urgPointer;
   uint32_t payloadSize;
+  uint16_t crc;
   uint8_t *payload;
   Segment()
       : sourcePort(0), destPort(0), seqNum(0), ackNum(0), window(0),
-        checksum(0), urgPointer(0), payloadSize(0), payload(nullptr)
+        checksum(0), urgPointer(0), payloadSize(0),crc(0), payload(nullptr)
   {
     data_offset = 6;
     reserved = 0;
@@ -169,5 +170,13 @@ Segment decodeSegment(const uint8_t *buffer, uint32_t length);
  * Change flags to uint8_t
  */
 uint8_t getFlags8(const Segment *segment);
+
+// CRC-16 calculation function
+uint16_t calculateCRC16(const Segment &segment);
+
+Segment updateCRC(Segment &segment);
+
+// Method to validate the CRC
+bool isValidCRC(const Segment &segment);
 
 #endif
