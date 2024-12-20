@@ -504,7 +504,7 @@ ConnectionResult TCPSocket::startFin(string dest_ip, uint16_t dest_port,
           consumeBuffer(dest_ip, dest_port, 0, finSeg.seqNum + 1,
                                     ACK_FLAG, COMMON_TIMEOUT);
       commandLine(
-          '+', "[" + status_strings[static_cast<int>(getStatus())] +
+          '+', "[" + getStatusConnection(dest_ip,dest_port) +
                    "] [S=" + to_string(answer_fin.segment.seqNum) +
                    "] [A=" + to_string(answer_fin.segment.ackNum) +
                    "] Received ACK request from  " + dest_ip +
@@ -589,7 +589,7 @@ ConnectionResult TCPSocket::sendBackN(uint8_t *dataStream, uint32_t dataSize,
               consumeBuffer(destIP, destPort, 0, seg.seqNum + 1, ACK_FLAG, 1);
 
           std::cout << IN
-                    << brackets(status_strings[(int)status])<<brackets("A=" +
+                    << brackets(getStatusConnection(destIP,destPort))<<brackets("A=" +
                            std::to_string(result.segment.ackNum))+
                            "Received ACK request from " + result.ip + ":" +
                            std::to_string(result.port)
