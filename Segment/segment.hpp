@@ -40,11 +40,10 @@ struct Segment
   uint16_t checksum;
   uint16_t urgPointer;
   uint32_t payloadSize;
-  uint16_t crc;
   uint8_t *payload;
   Segment()
       : sourcePort(0), destPort(0), seqNum(0), ackNum(0), window(0),
-        checksum(0), urgPointer(0), payloadSize(0),crc(0), payload(nullptr)
+        checksum(0), urgPointer(0), payloadSize(0), payload(nullptr)
   {
     data_offset = 6;
     reserved = 0;

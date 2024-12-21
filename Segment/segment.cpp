@@ -384,16 +384,15 @@ uint16_t calculateCRC16(const Segment &segment) {
 }
 
 // Method to update the CRC in a segment
-Segment updateCRC(Segment &segment) {
-    uint16_t crc = calculateCRC16(segment);
-    segment.crc = crc;  // Store CRC-16 value (16 bits)
-    return segment;
-}
+// Segment updateCRC(Segment &segment) {
+//     uint16_t crc = calculateCRC16(segment);
+//     segment.crc = crc;  // Store CRC-16 value (16 bits)
+//     return segment;
+// }
 
 // Method to validate the CRC
-bool isValidCRC(const Segment &segment) {
-    uint16_t originalCRC = segment.crc;
-    uint16_t computedCRC = calculateCRC16(segment);
-    std::cout<<originalCRC<<" "<<computedCRC<<std::endl;
-    return originalCRC == computedCRC;
-}
+// bool isValidCRC(const Segment &segment) {
+//     uint16_t originalCRC = segment.crc;
+//     uint16_t computedCRC = calculateCRC16(segment);
+//     return originalCRC == computedCRC;
+// }
